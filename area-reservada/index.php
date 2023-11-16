@@ -13,6 +13,19 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
     exit;
 }
 
+// Defina o número de meses para considerar como um ano (12 meses)
+$mesesPorAno = 12;
+
+// Calcula a data de corte (hoje - 1 ano em meses)
+$dataCorte = date('Y-m-d', strtotime('-' . $mesesPorAno . ' months'));
+
+// Query para atualizar a tabela "socios"
+$query = "UPDATE socios 
+          SET quota = 0
+          WHERE DATEDIFF(NOW(), data_pagamento) > " . $mesesPorAno;
+
+$result = $mysqli->query($query);
+
 $user = $_SESSION["username"];
 
 // Consulta SQL para obter as informações do usuário logado

@@ -36,10 +36,38 @@ function adicionarTurma($cod_turma, $prof_turma, $dis_turma, $nome_turma)
     global $mysqli;
     $stmt = $mysqli->prepare("INSERT INTO turmas (cod_turma, prof_turma, dis_turma, nome_turma) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("ssss", $cod_turma, $prof_turma, $dis_turma, $nome_turma);
-    $stmt->execute();
-    $stmt->close();
+
+    if ($stmt->execute()) {
+        $stmt->close();
+        return true;
+    } else {
+        // Tratamento de erro
+        return false;
+    }
 }
 
+// Função para adicionar alunos à tabela 'turmas_alunos'
+function adicionarAlunosATurma($cod_turma, $user)
+{
+    global $mysqli;
+    $table_name = 'turmas_alunos';
+    $stmt = $mysqli->prepare("INSERT INTO $table_name (cod_turma, user) VALUES (?, ?)");
+
+    if (!$stmt) {
+        // Tratamento de erro
+        return false;
+    }
+
+    if ($stmt->bind_param("ss", $cod_turma, $user) && $stmt->execute()) {
+        $stmt->close();
+        return true;
+    } else {
+        // Tratamento de erro
+        return false;
+    }
+}
+
+// Função para obter todos os alunos
 function getAllAlunos()
 {
     global $mysqli;
@@ -49,19 +77,6 @@ function getAllAlunos()
         $alunos[$row['user']] = $row['user'] . " - " . $row['nome'];
     }
     return $alunos;
-}
-
-// Função para adicionar os alunos selecionados à tabela da turma
-function adicionarAlunosTurma($table_name, $alunos_selecionados)
-{
-    global $mysqli;
-    $values = array();
-    foreach ($alunos_selecionados as $aluno) {
-        $values[] = "('" . $mysqli->real_escape_string($aluno) . "')";
-    }
-    $values_str = implode(",", $values);
-    $sql = "INSERT INTO $table_name (user) VALUES $values_str ON DUPLICATE KEY UPDATE user=user";
-    $mysqli->query($sql);
 }
 
 // Obter todos os professores existentes
@@ -76,6 +91,25 @@ $disciplinas = array();
 $result = $mysqli->query("SELECT cod_dis, nome_dis FROM cod_dis");
 while ($row = $result->fetch_assoc()) {
     $disciplinas[$row['cod_dis']] = $row['nome_dis'];
+}
+
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create_turma"])) {
+    $cod_turma = $_POST["cod_turma"];
+    $prof_turma = $_POST["professor_responsavel"];
+    $dis_turma = $_POST["disciplina_turma"];
+    $nome_turma = $_POST["nome"];
+    
+    // Obtenha os alunos selecionados do campo JSON
+    $alunos_selecionados_json = $_POST["alunos_selecionados_json"];
+    $alunos_selecionados = json_decode($alunos_selecionados_json);
+
+    if (!empty($alunos_selecionados)) {
+        foreach ($alunos_selecionados as $aluno) {
+            $user = $aluno->user; // Obtenha o valor do usuário
+            // Chame a função para adicionar cada aluno à tabela 'turmas_alunos'
+            adicionarAlunosATurma($cod_turma, $user);
+        }
+    }
 }
 
 ?>
@@ -109,7 +143,6 @@ while ($row = $result->fetch_assoc()) {
             text-align: right;
         }
     </style>
-
 </head>
 
 <body>
@@ -123,7 +156,7 @@ while ($row = $result->fetch_assoc()) {
         <h2>Gestão de Turmas</h2>
 
         <!-- Dropdown para selecionar a ação desejada -->
-        <form method="post" action=""> <!-- Adicionamos o formulário aqui -->
+        <form method="post" action="">
             <div class="mb-3">
                 <label for="selectAcao" class="form-label">Selecione o que fazer:</label>
                 <select class="form-select" id="selectAcao" name="action">
@@ -132,156 +165,132 @@ while ($row = $result->fetch_assoc()) {
                     <option value="eliminar_turma">Eliminar Turma</option>
                 </select>
             </div>
-            <!-- Adicionamos um input hidden para armazenar a ação selecionada -->
             <input type="hidden" name="prosseguir" value="1">
             <button type="submit" class="btn btn-primary">Prosseguir</button>
         </form>
-
     </div>
 
     <?php
-        // Verificar se a ação "Criar Turma" foi selecionada e mostrar formulário para adicionar alunos
-        if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"]) && $_POST["action"] === "criar_turma") {
-            // Obter todos os alunos existentes
-            $alunos = getAllAlunos();
-            
-            echo '<div class="container mt-4">';
-            echo '<h3>Criar Turma</h3>';
-            echo '<form method="post" action="">';
-            echo '<div class="mb-3">';
-            echo '<label for="cod_turma" class="form-label">Código da Turma:</label>';
-            $nextCodTurma = getNextTurmaCode();
-            echo '<input type="text" class="form-control" id="cod_turma" name="cod_turma" value="' . $nextCodTurma . '" readonly>';
-            echo '</div>';
-            echo '<div class="mb-3">';
-            echo '<label for="professor_responsavel" class="form-label">Prof da Turma:</label>';
-            echo '<select class="form-select" id="professor_responsavel" name="professor_responsavel">';
-            foreach ($professores as $prof_user => $prof_nome) {
-                echo '<option value="' . $prof_user . '">' . $prof_nome . '</option>';
-            }
-            echo '</select>';
-            echo '</div>';
-            echo '<div class="mb-3">';
-            echo '<label for="disciplina_turma" class="form-label">Disciplina da Turma:</label>';
-            echo '<select class="form-select" id="disciplina_turma" name="disciplina_turma">';
-            foreach ($disciplinas as $cod_dis => $nome_dis) {
-                echo '<option value="' . $cod_dis . '">' . $nome_dis . '</option>';
-            }
-            echo '</select>';
-            echo '</div>';
-            echo '<div class="mb-3">';
-            echo '<label for="nome" class="form-label">Título da Turma:</label>';
-            echo '<input type="text" class="form-control" id="nome" name="nome" required>';
-            echo '</div>';
+    // Verificar se a ação "Criar Turma" foi selecionada e mostrar formulário para adicionar alunos
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["action"]) && $_POST["action"] === "criar_turma") {
+        // Obter todos os alunos existentes
+        $alunos = getAllAlunos();
 
-            // Lista de alunos disponíveis para seleção
-            echo '<div class="mb-3">';
-            echo '<label class="form-label">Selecione os Alunos:</label>';
-            echo '<select class="form-select" multiple name="alunos_selecionados[]" id="selectAlunos">';
-            foreach ($alunos as $user => $aluno_nome) {
-                echo '<option value="' . $user . '">' . $aluno_nome . '</option>';
-            }
-            echo '</select>';
-            echo '</div>';
-            echo '<button type="button" class="btn btn-primary" id="adicionarAluno">Adicionar Aluno</button>';
-            echo '<table class="table mt-3">';
-            echo '<thead><tr><th>User</th><th>Nome</th><th>Ação</th></tr></thead>';
-            echo '<tbody id="alunosAdicionadosTable"></tbody>';
-            echo '</table>';
-            echo '<button type="submit" class="btn btn-primary" name="create_turma">Criar Turma</button>';
-            echo '</form>';
-            echo '</div>';
+        echo '<div class="container mt-4">';
+        echo '<h3>Criar Turma</h3>';
+        echo '<form method="post" action="">';
+        echo '<div class="mb-3">';
+        echo '<label for="cod_turma" class="form-label">Código da Turma:</label>';
+        $nextCodTurma = getNextTurmaCode();
+        echo '<input type="text" class="form-control" id="cod_turma" name="cod_turma" value="' . $nextCodTurma . '" readonly>';
+        echo '</div>';
+        echo '<div class="mb-3">';
+        echo '<label for="professor_responsavel" class="form-label">Prof da Turma:</label>';
+        echo '<select class="form-select" id="professor_responsavel" name="professor_responsavel">';
+        foreach ($professores as $prof_user => $prof_nome) {
+            echo '<option value="' . $prof_user . '">' . $prof_nome . '</option>';
         }
+        echo '</select>';
+        echo '</div>';
+        echo '<div class="mb-3">';
+        echo '<label for="disciplina_turma" class="form-label">Disciplina da Turma:</label>';
+        echo '<select class="form-select" id="disciplina_turma" name="disciplina_turma">';
+        foreach ($disciplinas as $cod_dis => $nome_dis) {
+            echo '<option value="' . $cod_dis . '">' . $nome_dis . '</option>';
+        }
+        echo '</select>';
+        echo '</div>';
+        echo '<div class="mb-3">';
+        echo '<label for="nome" class="form-label">Título da Turma:</label>';
+        echo '<input type="text" class="form-control" id="nome" name="nome" required>';
+        echo '</div>';
 
-        
-        // Verificar se o formulário de criação de turma foi submetido
-        if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create_turma"])) {
-            $cod_turma = $_POST["cod_turma"];
-            $prof_turma = $_POST["professor_responsavel"];
-            $dis_turma = $_POST["disciplina_turma"];
-            $nome_turma = $_POST["nome"];
+        echo '<div class="mb-3">';
+        echo '<label class="form-label">Selecione os Alunos:</label>';
+        echo '<select class="form-select" multiple name="alunos_selecionados[]" id="selectAlunos">';
+        foreach ($alunos as $user => $aluno_nome) {
+            echo '<option value="' . $user . '">' . $aluno_nome . '</option>';
+        }
+        echo '</select>';
+        echo '</div>';
+        echo '<button type="button" class="btn btn-primary" id="adicionarAluno">Adicionar Aluno</button>';
+        echo '<table class="table mt-3">';
+        echo '<thead><tr><th>User</th><th>Nome</th><th>Ação</th></tr></thead>';
+        echo '<tbody id="alunosAdicionadosTable"></tbody>';
+        echo '</table>';
+        echo '<input type="hidden" id="alunosSelecionadosJSON" name="alunos_selecionados_json">';
+        echo '<button type="submit" class="btn btn-primary" name="create_turma">Criar Turma</button>';
+        echo '</form>';
+    }
 
-            echo "Cod. Turma: " . $cod_turma . "<br>";
-            echo "Prof. Turma: " . $prof_turma . "<br>";
-            echo "Dis. Turma: " . $dis_turma . "<br>";
-            echo "Nome Turma: " . $nome_turma . "<br>";
-            echo "Alunos selecionados: ";
-
-            // Verificar se a variável 'alunos_selecionados' está definida
-            if (isset($_POST['alunos_selecionados'])) {
-                // Se estiver definida, atribuir o valor a uma variável
-                $alunos_selecionados = $_POST['alunos_selecionados'];
-                print_r($alunos_selecionados);
-
-                adicionarTurma($cod_turma, $prof_turma, $dis_turma, $nome_turma);
-
-                // Adicionar alunos à turma
-                if (!empty($alunos_selecionados)) {
-                    $table_name = 't' . substr($cod_turma, 1); // Nome da tabela da turma (por exemplo, t001)
-
-                    // Verificar se a tabela já existe antes de criar uma nova tabela
-                    $check_table_sql = "SHOW TABLES LIKE '$table_name'";
-                    $table_exists = $mysqli->query($check_table_sql)->num_rows > 0;
-
-                    if (!$table_exists) {
-                        $sql = "CREATE TABLE $table_name (user VARCHAR(255) PRIMARY KEY, nome VARCHAR(255))";
-                        $mysqli->query($sql);
-                    }
-
-                    adicionarAlunosTurma($table_name, $_POST['alunos_selecionados']);
-                    echo '<div class="alert alert-success mt-3">Turma criada com sucesso e alunos adicionados!</div>';
-                }
-            } else {
-                // Se a variável 'alunos_selecionados' não estiver definida, inicializá-la como um array vazio
-                $alunos_selecionados = array();
-                print_r($alunos_selecionados);
-
-                adicionarTurma($cod_turma, $prof_turma, $dis_turma, $nome_turma);
+    // Verificar se o formulário de criação de turma foi submetido
+    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST["create_turma"])) {
+        $cod_turma = $_POST["cod_turma"];
+        $prof_turma = $_POST["professor_responsavel"];
+        $dis_turma = $_POST["disciplina_turma"];
+        $nome_turma = $_POST["nome"];
+    
+        if (!empty($alunos_selecionados)) {
+            foreach ($alunos_selecionados as $aluno) {
+                $user = $aluno->user; // Obtenha o valor do usuário
+                // Chame a função para adicionar cada aluno à tabela 'turmas_alunos'
             }
         }
+    
+        if (adicionarTurma($cod_turma, $prof_turma, $dis_turma, $nome_turma)) {
+            echo '<div class="alert alert-success mt-3">Turma criada com sucesso!</div>';
+        } else {
+            echo '<div class="alert alert-danger mt-3">Erro ao criar a turma!</div>';
+        }
+    }
+    echo '</div>';    
+    ?>
 
-        ?>
+    <script>
+        $(document).ready(function() {
+            var alunosSelecionados = [];
+            var alunosTurma = [];
 
-        <script>
-            $(document).ready(function() {
-                var alunosSelecionados = [];
+            $("#adicionarAluno").click(function() {
+                var selectedAlunos = $("#selectAlunos option:selected");
 
-                $("#adicionarAluno").click(function() {
-                    var selectedAlunos = $("#selectAlunos option:selected");
+                selectedAlunos.each(function() {
+                    var user = $(this).val();
+                    var nome = $(this).text();
+                    alunosSelecionados.push({ user: user, nome: nome });
+                    alunosTurma.push({ user: user });
 
-                    selectedAlunos.each(function() {
-                        var user = $(this).val();
-                        var nome = $(this).text();
-                        alunosSelecionados.push({user: user, nome: nome});
-
-                        $(this).remove();
-                    });
-
-                    updateAlunosAdicionadosTable();
+                    $(this).remove();
                 });
 
-                function updateAlunosAdicionadosTable() {
-                    var table = $("#alunosAdicionadosTable");
-                    table.empty();
-
-                    for (var i = 0; i < alunosSelecionados.length; i++) {
-                        var aluno = alunosSelecionados[i];
-                        var row = '<tr><td>' + aluno.user + '</td><td>' + aluno.nome + '</td>';
-                        row += '<td><button type="button" class="btn btn-danger" onclick="removerAluno(' + i + ')">Remover</button></td></tr>';
-                        table.append(row);
-                    }
-                }
-
-                function removerAluno(index) {
-                    var alunoRemovido = alunosSelecionados.splice(index, 1)[0];
-                    $("#selectAlunos").append('<option value="' + alunoRemovido.user + '">' + alunoRemovido.nome + '</option>');
-                    updateAlunosAdicionadosTable();
-                }
-
-                window.removerAluno = removerAluno;
+                updateAlunosAdicionadosTable();
             });
-        </script>
 
+            function updateAlunosAdicionadosTable() {
+                var table = $("#alunosAdicionadosTable");
+                table.empty();
+
+                for (var i = 0; i < alunosSelecionados.length; i++) {
+                    var aluno = alunosSelecionados[i];
+                    var row = '<tr><td>' + aluno.user + '</td><td>' + aluno.nome + '</td>';
+                    row += '<td><button type="button" class="btn btn-danger" onclick="removerAluno(' + i + ')">Remover</button></td></tr>';
+                    table.append(row);
+                }
+
+                // Atualize o campo hidden com os alunos selecionados em JSON
+                $("#alunosSelecionadosJSON").val(JSON.stringify(alunosTurma));
+            }
+
+
+            function removerAluno(index) {
+                var alunoRemovido = alunosSelecionados.splice(index, 1)[0];
+                $("#selectAlunos").append('<option value="' + alunoRemovido.user + '">' + alunoRemovido.nome + '</option>');
+                updateAlunosAdicionadosTable();
+            }
+
+            window.removerAluno = removerAluno;
+        });
+    </script>
 
     <?php include "footer-reservado.php"; ?>
 

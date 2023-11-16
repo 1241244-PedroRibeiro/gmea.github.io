@@ -65,7 +65,7 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
     }
 
     // Função para inserir um novo usuário na categoria
-    function inserirUsuario($conexao, $nome, $nif, $cc, $data_nas, $email, $telef, $tipo, $password, $foto)
+    function inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, $tipo, $password, $foto)
     {
         $ultimoUsuario = obterUltimoUsuario($conexao, $tipo);
         if ($ultimoUsuario) {
@@ -78,7 +78,7 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
         $novoUsuario = $letraTipo . $novoNumero;
     
         // Inserir na tabela 'users1'
-        $query = "INSERT INTO users1 (user, nome, nif, cc, data_nas, telef, email, password, type, foto) VALUES ('$novoUsuario', '$nome', '$nif', '$cc', '$data_nas', '$email', '$telef', '$password', $tipo, '$foto')";
+        $query = "INSERT INTO users1 (user, nome, morada1, morada2, nif, cc, data_nas, email, telef, password, type, foto) VALUES ('$novoUsuario', '$nome', '$morada1', '$morada2', '$nif', '$cc', '$data_nas', '$email', '$telef', '$password', $tipo, '$foto')";
         mysqli_query($conexao, $query);
     
         if ($tipo === 1) { // Se for um aluno
@@ -104,7 +104,7 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
     // Função para inserir um novo aluno na tabela "alunos"
     function inserirAluno($conexao, $userID)
     {
-        $queryAlunos = "INSERT INTO alunos (user, cod_in1, prof_in1, cod_in2, prof_in2, cod_fm, cod_orq, cod_coro) VALUES ('$userID', 0, 0, 0, 0, 0, 0, 0)";
+        $queryAlunos = "INSERT INTO alunos (user, cod_in1, prof_in1, cod_in2, prof_in2, cod_fm, cod_orq, cod_coro, in_alg, regime, tipo_regime, irmaos, user_irmaos, mem_bs) VALUES ('$userID', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)";
         mysqli_query($conexao, $queryAlunos);
     }
 
@@ -116,6 +116,16 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
             <div class="mb-3">
                 <label for="nome" class="form-label">Nome:</label>
                 <input type="text" id="nome" name="nome" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="morada1" class="form-label">Morada:</label>
+                <input type="text" id="morada1" name="morada1" class="form-control" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="morada2" class="form-label">Morada (Continuação):</label>
+                <input type="text" id="morada2" name="morada2" class="form-control" required>
             </div>
 
             <div class="mb-3">
@@ -164,6 +174,8 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
             <div class="alert alert-success mt-4">
                 <?php
                 $nome = $_POST['nome'];
+                $morada1 = $_POST['morada1'];
+                $morada2 = $_POST['morada2'];
                 $nif = $_POST['nif'];
                 $cc = $_POST['cc'];
                 $data_nas = $_POST['data_nas'];
@@ -182,11 +194,11 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
 
                 // Verifica as categorias selecionadas
                 if ($type === '1') {
-                    inserirUsuario($conexao, $nome, $nif, $cc, $data_nas, $email, $telef, 1, $hashedPassword, $foto);
+                    inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, 1, $hashedPassword, $foto);
                 } elseif ($type === '2') {
-                    inserirUsuario($conexao, $nome, $nif, $cc, $data_nas, $email, $telef, 2, $hashedPassword, $foto);
+                    inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, 2, $hashedPassword, $foto);
                 } elseif ($type === '3') {
-                    inserirUsuario($conexao, $nome, $nif, $cc, $data_nas, $email, $telef, 3, $hashedPassword, $foto);
+                    inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, 3, $hashedPassword, $foto);
                 }
 
                 move_uploaded_file($_FILES['foto']['tmp_name'], $target_file);

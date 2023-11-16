@@ -29,6 +29,7 @@
                           <li><a class="dropdown-item" href="#">Inserir avisos</a></li>
                           <li><a class="dropdown-item" href="adicionar-inventario.php">Inserir inventário</a></li>
                           <li><a class="dropdown-item" href="#">Inserir membros banda sinfónica</a></li>
+                          <li><a class="dropdown-item" href="adicionar-socio.php">Inserir sócios</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -38,8 +39,9 @@
                         <ul class="dropdown-menu">
                           <li><a class="dropdown-item" href="gerir-professores.php">Professores</a></li>
                           <li><a class="dropdown-item" href="gerir-alunos.php">Alunos</a></li>
-                          <li><a class="dropdown-item" href="#">Turmas</a></li>
+                          <li><a class="dropdown-item" href="gerir-turmas.php">Turmas</a></li>
                           <li><a class="dropdown-item" href="#">Membros banda sinfónica</a></li>
+                          <li><a class="dropdown-item" href="#">Sócios</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -51,6 +53,19 @@
                           <li><a class="dropdown-item" href="#">Remover avisos</a></li>
                           <li><a class="dropdown-item" href="eliminar-inventario.php">Remover inventário</a></li>
                           <li><a class="dropdown-item" href="#">Remover membros banda sinfónica</a></li>
+                          <li><a class="dropdown-item" href="eliminar-socios.php">Remover Sócios</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle no-arrow" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                          EMITIR
+                        </a>
+                        <ul class="dropdown-menu">
+                          <li><a class="dropdown-item" href="#">Pagamentos aos professores</a></li>
+                          <li><a class="dropdown-item" href="#">Pagamentos aos membros da banda sinfónica</a></li>
+                          <li><a class="dropdown-item" href="quotas-socios.php">Quotas Sócios</a></li>
+                          <li><a class="dropdown-item" href="mensalidades-alunos.php">Mensalidades dos alunos</a></li>
+                          <li><a class="dropdown-item" href="emitir-faturas.php">Recibos</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -65,6 +80,7 @@
                           <li><a class="dropdown-item" href="consultar-inventario.php">Inventário (com filtro)</a></li>
                           <li><a class="dropdown-item" href="consultar-inventario-todo.php">Inventário (todo)</a></li>
                           <li><a class="dropdown-item" href="#">Membros Banda Sinfónica</a></li>
+                          <li><a class="dropdown-item" href="#">Quotas Sócios</a></li>
                         </ul>
                     </li>
                     <a href="generals/logout.php" class="nav-item nav-link">TERMINAR SESSÃO</a>

@@ -22,6 +22,30 @@ if (isset($_GET['search'])) {
     $query .= " AND nome LIKE '%$search%'";
 }
 
+function obterDadosDoAluno($user) {
+    global $mysqli;
+    
+    // Create a prepared statement to retrieve student data
+    $query = "SELECT nome, morada1, morada2, nif FROM users1 WHERE user = ?";
+    $stmt = $mysqli->prepare($query);
+    
+    if ($stmt) {
+        $stmt->bind_param("s", $user);
+        if ($stmt->execute()) {
+            $result = $stmt->get_result();
+            if ($result->num_rows > 0) {
+                $alunoData = $result->fetch_assoc();
+                $stmt->close();
+                return $alunoData;
+            }
+        }
+        $stmt->close();
+    }
+
+    return null;  // Return null if data retrieval fails
+}
+
+
 $resultado = $mysqli->query($query);
 
 if ($resultado) {
@@ -55,32 +79,47 @@ if ($resultado_prof) {
     echo "Erro na consulta: " . $mysqli->error;
 }
 
+$adicionar_socio = 0; // Defina um valor padrão para $adicionar_socio
+
 // Process form submission and insert data into the database
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $user = $_POST["user"];
+    $regime = $_POST["regime"];
+    $tipo_regime = $_POST["tipo_regime"];
     $instrumento1 = $_POST["instrumento1"];
     $prof_in1 = $_POST["prof_in1"];
+    $dur1 = $_POST["dur1"];
     $instrumento2 = $_POST["instrumento2"];
     $prof_in2 = $_POST["prof_in2"];
+    $dur2 = $_POST["dur2"];
     $formacao = $_POST["formacao"];
     $orquestra = $_POST["orquestra"];
     $coro = $_POST["coro"];
-    $regime = $_POST["regime"];
-    $mem_bs = $_POST["mem_bs"];
-    $dur1 = $_POST["dur1"];
-    $dur2 = $_POST["dur2"];
     $in_alg = $_POST["in_alg"];
+    $desc_irmaos = $_POST["desc_irmaos"];
+    $quotaee = isset($_POST["quotaee"]) ? $_POST["quotaee"] : "1";
+
+    $adicionar_socio = isset($_POST["adicionar_socio"]) ? $_POST["adicionar_socio"] : 0;
+
+    
+    // Atualização da coluna "irmaos" com base na seleção do usuário
+    $irmaos = ($_POST["irmaos"] == "1") ? 1 : 0;
+
+    // Atualização da coluna "user_irmaos" com base na seleção do usuário
+    $user_irmaos = ($_POST["irmaos"] == "1") ? $_POST["user_irmaos"] : null;
+
+    $mem_bs = $_POST["mem_bs"];
 
 
     // Insert the data into the database
-    $insert_query = "UPDATE alunos SET cod_in1 = ?, prof_in1 = ?, cod_in2 = ?, prof_in2 = ?, cod_fm = ?, cod_orq = ?, cod_coro = ?, regime = ?, mem_bs = ?, dur1 = ?, dur2 = ?, in_alg = ? WHERE user = ?";
+    $insert_query = "UPDATE alunos SET regime = ?, tipo_regime = ?, cod_in1 = ?, prof_in1 = ?, dur1 = ?, cod_in2 = ?, prof_in2 = ?, dur2 = ?, cod_fm = ?, cod_orq = ?, cod_coro = ?, in_alg = ?, irmaos = ?, user_irmaos = ?, desc_irmaos = ?, quota_socio = ?, mem_bs = ? WHERE user = ?";
     $stmt = $mysqli->prepare($insert_query);
     $insert_query = "UPDATE instrumentos SET estado = ?, user = ? WHERE codigo = ?";
     $stmti = $mysqli->prepare($insert_query);
     
     if ($stmt) {
-        $stmt->bind_param("isisiiiiiiiis", $instrumento1, $prof_in1, $instrumento2, $prof_in2, $formacao, $orquestra, $coro, $regime, $mem_bs, $dur1, $dur2, $in_alg, $user);
-        
+        $stmt->bind_param("iiisiisiiiiiisiiis", $regime, $tipo_regime, $instrumento1, $prof_in1, $dur1, $instrumento2, $prof_in2, $dur2, $formacao, $orquestra, $coro, $in_alg, $irmaos, $user_irmaos, $desc_irmaos, $quotaee, $mem_bs, $user);
+
         if ($stmt->execute()) {
             // Data inserted successfully, redirect to a success page or display a success message
             $successMessage = 'Dados atualizados com sucesso!';
@@ -134,6 +173,48 @@ if ($resultado_ins) {
 }
 
 
+if ($adicionar_socio == "1") {
+    // Adicionar como sócio
+    $alunoData = obterDadosDoAluno($user);
+    if ($alunoData) {
+        // Insira os dados do aluno na tabela "socios"
+        $inserirSocio = $mysqli->prepare("INSERT INTO socios (nome, morada1, morada2, nif) VALUES (?, ?, ?, ?)");
+        $inserirSocio->bind_param("ssss", $alunoData["nome"], $alunoData["morada1"], $alunoData["morada2"], $alunoData["nif"]);
+        if ($inserirSocio->execute()) {
+            // Obter o último "num_socio" inserido na tabela "socios"
+            $ultimoNumSocio = $mysqli->query("SELECT MAX(num_socio) FROM socios")->fetch_row()[0];
+            // Inserir o valor de "num_socio" na tabela "alunos"
+            $inserirNumSocio = $mysqli->prepare("UPDATE alunos SET num_socio = ? WHERE user = ?");
+            $inserirNumSocio->bind_param("ss", $ultimoNumSocio, $user);
+            if ($inserirNumSocio->execute()) {
+                $k=1;
+            } else {
+                $k=1;
+            }
+        } else {
+            $errorMessage = 'Erro ao adicionar aluno como sócio.';
+        }
+    } else {
+        $errorMessage = 'Erro ao obter os dados do aluno.';
+    }
+}
+
+if ($adicionar_socio == "2") {
+    // Já é sócio
+    $num_socio_selecionado = $_POST["num_socio_selecionado"];
+    if (!empty($num_socio_selecionado)) {
+        // Atualize o registro do aluno com o número de sócio selecionado
+        $inserirNumSocio = $mysqli->prepare("UPDATE alunos SET num_socio = ? WHERE user = ?");
+        $inserirNumSocio->bind_param("ss", $num_socio_selecionado, $user);
+        if ($inserirNumSocio->execute()) {
+            $k=1;
+        } else {
+            $k=1;
+        }
+    }
+}
+
+
 ?>
 
 <!DOCTYPE html>
@@ -170,27 +251,41 @@ if ($resultado_ins) {
         </form>
         <h3>Selecione um aluno:</h3>
         <div class="mb-3">
-            <select id="aluno" name="aluno" class="form-select" required>
-                <option value="">Selecione um aluno</option>
-                <?php foreach ($alunos as $aluno): ?>
-                    <option value="<?php echo $aluno['user']; ?>"><?php echo $aluno['user'] . ' - ' . $aluno['nome']; ?></option>
-                <?php endforeach; ?>
-            </select>
+        <select id="aluno" name="aluno" class="form-select" required>
+            <option value="">Selecione um aluno</option>
+            <?php foreach ($alunos as $aluno): ?>
+                <option value="<?php echo $aluno['user']; ?>" data-user="<?php echo $aluno['user']; ?>">
+                    <?php echo $aluno['user'] . ' - ' . $aluno['nome']; ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
         </div>
         <button style="background-color: #00631b; border-color: black;" id="prosseguir-btn" class="btn btn-primary">Prosseguir</button>
         <div id="formulario" style="display: none;">
             <h3>Formulário de Dados do Aluno</h3>
             <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
-                <div class="mb-3">
-                    <label for="regime" class="form-label">Regime:</label>
+            <div class="mb-3">
+                    <label for="regime" class="form-label">Regime</label>
                     <select name="regime" id="regime" class="form-select" required>
-                        <option value="1">Normal</option>
-                        <option value="2">Apenas Orquestra</option>
-                        <option value="3">Apenas Coro</option>
-                        <option value="4">Orquestra e Coro</option>
-                        <option value="5">Livre</option>
+                        <option value="4">Pré-Iniciação</option>
+                        <option value="1">Iniciação</option>
+                        <option value="2">Básico</option>
+                        <option value="3">Secundário</option>
                     </select>
-                </div>
+            </div>
+            <div class="mb-3">
+                    <label for="tipo_regime" class="form-label">Regime</label>
+                    <select name="tipo_regime" id="tipo_regime" class="form-select" required>
+                        <option value="1">Normal</option>
+                        <option value="2">Livre</option>
+                        <option value="3">Orquestra</option>
+                        <option value="4">Coro</option>
+                        <option value="5">Ensemble</option>
+                        <option value="6">Orquestra e Ensemble</option>
+                        <option value="7">Orquestra e Coro</option>
+                        <option value="8">Coro e Ensemble</option>
+                    </select>
+            </div>
                 <div class="mb-3">
                     <label for="instrumento1" class="form-label">1.º Instrumento</label>
                     <select id="instrumento1" name="instrumento1" class="form-select" required>
@@ -210,6 +305,7 @@ if ($resultado_ins) {
                         <option value="18">Trompete</option>
                         <option value="19">Contrabaixo</option>
                         <option value="20">Bombardino</option>
+                        <option value="21">Canto</option>
                     </select>
                     <label for="prof_in1" class="form-label">Professor 1.º Instrumento</label>
                     <select id="prof_in1" name="prof_in1" class="form-select" required>
@@ -259,8 +355,7 @@ if ($resultado_ins) {
                     <label for="formacao" class="form-label">Formação Musical</label>
                     <select id="formacao" name="formacao" class="form-select" required>
                         <option value="0">Não Aplicável</option>
-                        <option value="1">Sim (Iniciação)</option>
-                        <option value="2">Sim</option>
+                        <option value="1">Sim</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -294,10 +389,60 @@ if ($resultado_ins) {
                     </select>
                 </div>
                 <div class="mb-3">
+                    <label for="irmaos" class="form-label">Tem irmãos?</label>
+                    <select name="irmaos" id="irmaos" class="form-select" required onchange="showSiblingSelect(this)">
+                        <option value="0">Não</option>
+                        <option value="1">Sim</option>
+                    </select>
+                </div>
+
+                <div id="user_irmaos" style="display: none;" class="mb-3">
+                    <label for="user_irmaos" class="form-label">Selecionar irmão:</label>
+                    <select name="user_irmaos" id="user_irmaos" class="form-select">
+                        <option value="">Selecione o irmão</option>
+                        <?php
+                        // Loop through the $alunos array to populate sibling options
+                        foreach ($alunos as $aluno) {
+                            echo '<option value="' . $aluno['user'] . '">' . $aluno['user'] . ' - ' . $aluno['nome'] . '</option>';
+                        }
+                        ?>
+                    </select>
+                    <input type="checkbox" id="elegivel1" name="elegivel1" value="0" onchange="updateDescIrmaos()"/>
+                    <label for="elegivel1"> Elegível para desconto irmãos? </label>
+                    <input type="checkbox" id="elegivel2" name="elegivel2" value="0" onchange="updateDescIrmaos()"/>
+                    <label for="elegivel2"> Desconto 2.º irmão? </label>
+                    <input type="hidden" name="desc_irmaos" id="desc_irmaos" value="0">
+                    <input type="checkbox" id="quotaee_input" name="quotaee" value="1" onchange="updateDescIrmaos()"/>
+                    <label for="quotaee"> Paga quota juntamente com o E.E.? </label>
+                </div>
+                <div class="mb-3">
                     <label for="mem_bs" class="form-label">Membro da Banda Sinfónica:</label>
                     <select name="mem_bs" id="mem_bs" class="form-select" required>
                         <option value="0">Não</option>
                         <option value="1">Sim</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label for="adicionar_socio" class="form-label">Adicionar como sócio?</label>
+                    <select name="adicionar_socio" id="adicionar_socio" class="form-select">
+                        <option value="1">Sim</option>
+                        <option value="2">Já é sócio</option>
+                    </select>
+                </div>
+                <div id="num_socio_selecionado_div" style="display: none;" class="mb-3">
+                    <label for="num_socio_selecionado" class="form-label">Selecionar sócio existente:</label>
+                    <select name="num_socio_selecionado" id="num_socio_selecionado" class="form-select">
+                        <option value="">Selecione o sócio</option>
+                        <?php
+                        // Consulta a tabela "socios" para obter todos os sócios
+                        $query_socios = "SELECT num_socio, nome FROM socios";
+                        $resultado_socios = $mysqli->query($query_socios);
+                        if ($resultado_socios) {
+                            while ($row = $resultado_socios->fetch_assoc()) {
+                                echo '<option value="' . $row['num_socio'] . '">' . $row['num_socio'] . ' - ' . $row['nome'] . '</option>';
+                            }
+                        }
+                        ?>
                     </select>
                 </div>
                 <input type="hidden" name="user" id="user">
@@ -342,6 +487,50 @@ if ($resultado_ins) {
                     duracaoDiv.style.display = "none";
                 }
             }
+
+            function showSiblingSelect(user_irmaosSelect) {
+                const siblingSelect = document.getElementById('user_irmaos');
+                
+                if (user_irmaosSelect.value === '1') {
+                    siblingSelect.style.display = 'block'; // Exibe o campo de seleção de irmãos
+                } else {
+                    siblingSelect.style.display = 'none'; // Oculta o campo de seleção de irmãos
+                }
+            }
+
+            function updateDescIrmaos() {
+                var descIrmaosInput = document.getElementById('desc_irmaos');
+                var irmaos1Checkbox = document.getElementById('elegivel1');
+                var irmaos2Checkbox = document.getElementById('elegivel2');
+
+                if (irmaos1Checkbox.checked) {
+                    descIrmaosInput.value = "1";
+                } 
+                else if (irmaos2Checkbox.checked) {
+                    descIrmaosInput.value = "2";
+                }
+                else {
+                    descIrmaosInput.value = "0";
+                }
+
+                var quotaeeInput = document.getElementById('quotaee_input');
+                if (quotaeeInput.checked) {
+                    quotaeeInput.value = "2"; // Define o valor como 2 quando a checkbox está selecionada
+                } else {
+                    quotaeeInput.value = "1"; // Define o valor como 1 quando a checkbox não está selecionada
+                }
+            }
+
+            const adicionarSocioSelect = document.getElementById('adicionar_socio');
+            const numSocioSelecionadoDiv = document.getElementById('num_socio_selecionado_div');
+
+            adicionarSocioSelect.addEventListener('change', function() {
+                if (adicionarSocioSelect.value === '2') {
+                    numSocioSelecionadoDiv.style.display = 'block';
+                } else {
+                    numSocioSelecionadoDiv.style.display = 'none';
+                }
+            });
 
     </script>
 </body>

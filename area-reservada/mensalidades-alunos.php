@@ -39,7 +39,7 @@ $user = ''; // Initialize the $user variable
 if (isset($_POST['aluno'])) {
     $user = $_POST['aluno'];
 
-    $query = "SELECT regime, tipo_regime, dur1, dur2, cod_fm, cod_orq, cod_coro, in_alg, irmaos, mem_bs, num_fatura FROM alunos WHERE user='$user'";
+    $query = "SELECT regime, tipo_regime, dur1, dur2, cod_fm, cod_orq, cod_coro, in_alg, desc_irmaos, mem_bs, num_fatura FROM alunos WHERE user='$user'";
     $result = $mysqli->query($query);
 
     if ($result) {
@@ -53,7 +53,7 @@ if (isset($_POST['aluno'])) {
             $cod_orq = $row['cod_orq'];
             $cod_coro = $row['cod_coro'];
             $in_alg = $row['in_alg'];
-            $irmaos = $row['irmaos'];
+            $desc_irmaos = $row['desc_irmaos'];
             $mem_bs = $row['mem_bs'];
             $num_fatura = $row['num_fatura'];
         } else {
@@ -80,44 +80,98 @@ if (isset($_POST['aluno'])) {
     } else {
         echo "Erro na consulta: " . $mysqli->error;
     }
-    
-    $propina = 0; // Initialize the $propina variable
 
-    if ($regime == 1) {
-        // Add your code for regime 1 here
-    }
-    else if ($regime == 2) {
-        if ($tipo_regime == 1) {
+    if ($tipo_regime == 1) {
+        if ($dur1 == 20) {
+            $propina = 40;
+        }
+        else if ($dur1 == 30) {
+            $propina = 50;
+        }
+        else if ($dur1 == 50) {
             $propina = 60;
-            if ($mem_bs == 1) {
-                $propina = $propina * 0.8575;
-            }
-            if ($irmaos == 1) {
-                $propina = $propina - 3;
+        }
+
+        if ($dur2 == 20) {
+            $propina += 40;
+        }
+        else if ($dur2 == 30) {
+            $propina += 50;
+        }
+        else if ($dur2 == 50) {
+            $propina += 60;
+        }
+
+        if ($mem_bs == 1) {
+            $propina = $propina - 3;
+        }
+
+        if ($desc_irmaos==1) {
+            $propina = $propina * .85;
+        }
+
+        else if ($desc_irmaos==2) {
+            $propina = $propina * .90;
+        }
+
+        if ($in_alg != 0) {
+            if ($mem_bs != 1) {
+                $propina += 5;
             }
         }
-        else if ($tipo_regime == 2) {
-            // Add your code for regime 2 and tipo_regime 2 here
-        }
-    }
-    else if ($regime == 3) {
-        if ($tipo_regime == 1) {
-            $propina = 60;
-            if ($irmaos == 1) {
-                $propina = $propina * 0.8575;
-            }
-            if ($mem_bs == 1) {
-                $propina = $propina - 3;
-            }
-        }
+        
+        $propina = $propina . '€';
     }
 
-    if (isset($_POST['tipo_mes'])) {
-        if ($_POST['tipo_mes'] == 2) {
-            $propina = $propina * 0.5;
+    if ($tipo_regime == 2) {
+        if ($dur1 == 20) {
+            $propina = 40;
         }
-    }  
+        else if ($dur1 == 30) {
+            $propina = 50;
+        }
+        else if ($dur1 == 50) {
+            $propina = 65;
+        }
+
+        if ($dur2 == 20) {
+            $propina += 40;
+        }
+        else if ($dur2 == 30) {
+            $propina += 50;
+        }
+        else if ($dur2 == 50) {
+            $propina += 65;
+        }
+
+        if($cod_fm != 0) {
+            $propina += 40;
+        }
+
+        if ($mem_bs == 1) {
+            $propina = $propina - 3;
+        }
+
+        if ($desc_irmaos==1) {
+            $propina = $propina * .85;
+        }
+
+        else if ($desc_irmaos==2) {
+            $propina = $propina * .90;
+        }
+
+        if ($in_alg != 0) {
+            if ($mem_bs != 1) {
+                $propina += 5;
+            }
+        }
+        
+        $propina = $propina . '€';
+    }
+  
+
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -188,15 +242,15 @@ include "header-direcao.php";
     <?php if (!empty($user)): ?>
     <div id="formulario">
         <h3>Formulário de Dados do Aluno</h3>
-        <form action="./generals/generate-pdf.php" method="post">
+        <form action="./generals/pdf-mensalidades-alunos.php" method="post">
             <input type="hidden" name="user" id="user" value="<?php echo $user; ?>">
             <input type="hidden" name="nome" id="nome" value="">
             <div class="mb-3">
-                <label for="tipo_mes" class="form-label">Tipo Mês</label>
+                <label for="tipo_mes" class="form-label">Tipo:</label>
                 <select name="tipo_mes" id="tipo_mes" class="form-select" required>
-                    <option value="0">Selecione o tipo de mês</option>
-                    <option value="1">Mês Completo</option>
-                    <option value="2">Meio mês</option>
+                    <option value="0">Selecione o tipo de fatura</option>
+                    <option value="1">Fatura - Mês Completo</option>
+                    <option value="2">Fatura - Meio mês</option>
                 </select>
             </div>
             <div class="mb-3">
@@ -220,18 +274,16 @@ include "header-direcao.php";
                 <input type="text" name="email" id="email" class="form-control" readonly value="<?php echo $email; ?>">
             </div>
             <div class="mb-3">
-                <label for="propina" class="form-label">Valor da propina:</label>
+                <label for="propina" class="form-label">Valor base da propina:</label>
                 <input type="text" name="propina" id="propina" class="form-control" readonly value="<?php echo $propina; ?>">
+                <input type="hidden" name="meiapropina" value="<?php echo number_format((str_replace("€", "", $propina) / 2), 2); ?>">
             </div>
             <div class="mb-3">
                 <label for="obs" class="form-label">Observações:</label>
                 <input type="text" name="obs" id="obs" class="form-control">
             </div>
             <input type="hidden" name="num_fatura" value="<?php echo $num_fatura; ?>">
-            <div class="mb-3">
-                <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" id="atualizar-formulario">Atualizar Formulário</button>
-                <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit">Gerar Fatura</button>
-            </div>
+            <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit">Gerar Fatura</button>
         </form>
     </div>
     <?php endif; ?>
@@ -242,11 +294,9 @@ include "footer-reservado.php";
 ?>
 
 <script>
+    // JavaScript code to show/hide the form
     const alunoSelect = document.getElementById('aluno');
     const formulario = document.getElementById('formulario');
-    const tipoMesSelect = document.getElementById('tipo_mes');
-    const propinaInput = document.getElementById('propina');
-    const atualizarFormularioButton = document.getElementById('atualizar-formulario');
 
     alunoSelect.addEventListener('change', function() {
         if (alunoSelect.value === '') {
@@ -255,35 +305,7 @@ include "footer-reservado.php";
             formulario.style.display = 'block';
         }
     });
-
-    atualizarFormularioButton.addEventListener('click', function() {
-        if (tipoMesSelect.value === '0') {
-            propinaInput.value = 'Selecione primeiro o tipo de mês';
-        } else if (tipoMesSelect.value === '1') {
-            // Calculate propina for Mês Completo
-            let propina = 60;
-            if (irmaos === 1) {
-                propina = propina * 0.8575;
-            }
-            if (mem_bs === 1) {
-                propina = propina - 3;
-            }
-            propinaInput.value = propina + '€';
-        } else if (tipoMesSelect.value === '2') {
-            // Calculate propina for Meio mês
-            let propina = 60;
-            if (irmaos === 1) {
-                propina = propina * 0.8575;
-            }
-            if (mem_bs === 1) {
-                propina = propina - 3;
-            }
-            propina = propina / 2;
-            propinaInput.value = propina + '€';
-        }
-    });
 </script>
-
 
 </body>
 </html>
