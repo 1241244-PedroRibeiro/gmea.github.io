@@ -7,55 +7,66 @@ if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
 
-if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
+if (empty($_SESSION["session_id"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
 }
 
-$socios = array(); // Initialize the $socios variable as an empty array
+$socios = array();
 
-// Code to retrieve socios from the database
+// Retrieve socios from the database
 $query = "SELECT num_socio, nome FROM socios";
 
 if (isset($_GET['search'])) {
-    $search = $_GET['search'];
+    $search = $mysqli->real_escape_string($_GET['search']);
     $query .= " WHERE nome LIKE '%$search%'";
 }
 
 $resultado = $mysqli->query($query);
 
 if ($resultado) {
-    // Loop to iterate through the results and add the socios to the $socios array
     while ($row = $resultado->fetch_assoc()) {
         $socios[] = $row;
     }
 } else {
-    // In case there is an error in the query, display an error message or handle it appropriately
     echo "Erro na consulta: " . $mysqli->error;
 }
 
 $selectedSocio = '';
-$numQuotas = 1; // Initialize the number of quotas with a default value
+$selectedAno = '';
+$years = array();
+$paymentStatus = 'unpaid';
 
 if (isset($_POST['socio'])) {
-    $selectedSocio = $_POST['socio'];
+    $selectedSocio = $mysqli->real_escape_string($_POST['socio']);
+    $selectedAno = $mysqli->real_escape_string($_POST['year']);
 
     // Get the details of the selected socio
-    $query = "SELECT nome, morada1, morada2, nif FROM socios WHERE num_socio='$selectedSocio'";
+    $query = "SELECT nome, morada1, morada2, nif, DATE_FORMAT(data_added, '%Y') as ano_adicionado FROM socios WHERE num_socio='$selectedSocio'";
     $result = $mysqli->query($query);
 
     if ($result) {
-        $row = $result->fetch_assoc(); // Get the socio details
+        $row = $result->fetch_assoc();
         if ($row) {
             $nome = $row['nome'];
             $morada1 = $row['morada1'];
             $morada2 = $row['morada2'];
             $nif = $row['nif'];
-            $hoje = date('Y-m-d');
-            $query = "UPDATE socios 
-                        SET quota = 1, data_pagamento = '$hoje'
-                        WHERE num_socio = '$selectedSocio'";
-            $result = $mysqli->query($query);
+            $ano_adicionado = $row['ano_adicionado'];
+            $ano_atual = date('Y');
+
+            // Generate years array from year added to current year
+            for ($year = $ano_adicionado; $year <= $ano_atual; $year++) {
+                $years[] = $year;
+            }
+
+            // Check payment status for the selected year
+            $queryPayment = "SELECT * FROM quotas_socios WHERE num_socio='$selectedSocio' AND ano='$selectedAno'";
+            $resultPayment = $mysqli->query($queryPayment);
+
+            if ($resultPayment && $resultPayment->num_rows > 0) {
+                $paymentStatus = 'paid';
+            }
         } else {
             echo "O sócio selecionado não tem informações definidas.";
         }
@@ -63,7 +74,6 @@ if (isset($_POST['socio'])) {
         echo "Erro na consulta: " . $mysqli->error;
     }
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -85,9 +95,15 @@ if (isset($_POST['socio'])) {
     <img style="width: 100%; height: auto;" src="./media/topAR.png" class="img-responsive">
 </div>
 
-<?php
-include "header-direcao.php";
-?>
+<?php 
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
+            include "header-direcao.php"; 
+        } 
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        } 
+
+    ?>
 
 <div class="container">
     <h2>Gerar Faturas de Quotas</h2>
@@ -101,7 +117,7 @@ include "header-direcao.php";
         <h3>Selecione um sócio:</h3>
         <div class="mb-3">
             <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
-                <select id="socio" name="socio" class="form-select" required>
+                <select id="socio" name="socio" class="form-select" required onchange="fetchYears(this.value)">
                     <option value="">Selecione um sócio</option>
                     <?php foreach ($socios as $socio): ?>
                         <option value="<?php echo $socio['num_socio']; ?>" data-nome="<?php echo $socio['nome']; ?>">
@@ -110,6 +126,16 @@ include "header-direcao.php";
                     <?php endforeach; ?>
                 </select>
                 <br>
+                <div id="yearSection" style="display: none;">
+                    <label for="year" class="form-label">Selecione o Ano:</label>
+                    <select id="year" name="year" class="form-select" required onchange="checkPaymentStatus(this.value)">
+                        <option value="">Selecione um ano</option>
+                        <?php foreach ($years as $year): ?>
+                            <option value="<?php echo $year; ?>"><?php echo $year; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <br>
                 <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit">Selecionar</button>
             </form>
         </div>
@@ -117,12 +143,9 @@ include "header-direcao.php";
     <?php if (!empty($selectedSocio)): ?>
         <div id="formulario">
             <h3>Formulário de Faturas de Quotas</h3>
-            <form action="generals/pdf-quotas-socios.php" method="post">
+            <form id="generateInvoiceForm" action="generals/pdf-quotas-socios.php" method="post">
                 <input type="hidden" name="socio" value="<?php echo $selectedSocio; ?>">
-                <div class="mb-3">
-                    <label for="num_quotas" class="form-label">Número de Quotas:</label>
-                    <input type="number" name="num_quotas" id="num_quotas" class="form-control" value="<?php echo $numQuotas; ?>" required>
-                </div>
+                <input type="hidden" name="ano" value="<?php echo $selectedAno; ?>">
                 <div class="mb-3">
                     <label for="nome" class="form-label">Nome:</label>
                     <input type="text" name="nome" id="nome" class="form-control" readonly value="<?php echo $nome; ?>">
@@ -147,7 +170,16 @@ include "header-direcao.php";
                     <label for="obs" class="form-label">Observações:</label>
                     <textarea name="obs" id="obs" class="form-control"></textarea>
                 </div>
-                <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit" name="submit">Gerar Faturas</button>
+                <button id="generateInvoiceButton" style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="button">Gerar Fatura</button>
+            </form>
+            <br>
+            <form id="confirmPaymentForm" method="post">
+                <input type="hidden" name="socio" value="<?php echo $selectedSocio; ?>">
+                <input type="hidden" name="year" value="<?php echo $selectedAno; ?>">
+                <button id="confirmPaymentButton" style="background-color: <?php echo $paymentStatus == 'paid' ? 'gray' : '#428bca'; ?>; border-color: black;" class="btn btn-primary" type="button" <?php echo $paymentStatus == 'paid' ? 'disabled' : ''; ?>>
+                    Confirmar pagamento
+                </button>
+                <span id="paymentMessage" class="text-danger" style="display: <?php echo $paymentStatus == 'paid' ? 'block' : 'none'; ?>;">O pagamento desta quota já foi realizado.</span>
             </form>
         </div>
     <?php endif; ?>
@@ -158,17 +190,54 @@ include "footer-reservado.php";
 ?>
 
 <script>
-    // JavaScript code to show/hide the form
-    const socioSelect = document.getElementById('socio');
-    const formulario = document.getElementById('formulario');
+function fetchYears(numSocio) {
+    if (numSocio === '') {
+        document.getElementById('yearSection').style.display = 'none';
+        return;
+    }
 
-    socioSelect.addEventListener('change', function() {
-        if (socioSelect.value === '') {
-            formulario.style.display = 'none';
-        } else {
-            formulario.style.display = 'block';
+    $.ajax({
+        url: 'fetch_years.php',
+        method: 'POST',
+        data: { num_socio: numSocio },
+        success: function(response) {
+            $('#year').html(response);
+            document.getElementById('yearSection').style.display = 'block';
         }
     });
+}
+
+
+document.getElementById('generateInvoiceButton').addEventListener('click', function() {
+    document.getElementById('generateInvoiceForm').submit();
+});
+
+document.getElementById('confirmPaymentButton').addEventListener('click', function() {
+    const numSocio = document.querySelector('#confirmPaymentForm input[name="socio"]').value;
+    const year = document.querySelector('#confirmPaymentForm input[name="year"]').value;
+
+    if (numSocio === '' || year === '') {
+        alert('Selecione um sócio e um ano primeiro.');
+        return;
+    }
+
+    $.ajax({
+        url: 'confirm_payment.php',
+        method: 'POST',
+        data: { num_socio: numSocio, year: year },
+        success: function(response) {
+            if (response === 'success') {
+                document.getElementById('confirmPaymentButton').disabled = true;
+                document.getElementById('confirmPaymentButton').style.backgroundColor = 'gray';
+                document.getElementById('paymentMessage').style.display = 'block';
+                // Submeter o formulário para gerar a fatura após a confirmação do pagamento
+                document.getElementById('generateInvoiceForm').submit();
+            } else {
+                alert('Erro ao confirmar pagamento: ' + response);
+            }
+        }
+    });
+});
 </script>
 
 </body>

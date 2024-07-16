@@ -6,11 +6,12 @@
     if ($mysqli->connect_error) {
         die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
     }
-    if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["user"]) && empty($_POST["password"]) || $_SESSION["type"]!=3) {
+    if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["user"]) && empty($_POST["password"]) || $_SESSION["type"]<3) {
         header("Location: ../index.php");
         exit;
     }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -49,9 +50,27 @@
         <img style="width: 100%; height: auto;" src="./media/topAR.png" class="img-responsive">
     </div>
 
-    <?php
-        include "header-direcao.php";
+    <?php 
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
+            include "header-direcao.php"; 
+        } 
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        } 
+
     ?>
+    <div class="container mb-3">
+        <label for="acao" class="form-label">Selecione uma ação:</label>
+        <select name="acao" id="acao" class="form-select">
+            <option value="">Selecione</option>
+            <option value="adicionar">Adicionar Inventário</option>
+            <option value="editar">Editar Informações de Inventário</option>
+            <option value="consultar">Consultar Inventário</option>
+            <option value="atribuir">Atribuir Inventário</option>
+            <option value="eliminar">Eliminar Inventário</option>
+        </select>
+    </div>
+
 
     <div class="container mt-5">
         <h2 class="mt-5 text-center">Escolha uma opção:</h2>
@@ -108,8 +127,8 @@
                         </select>
                     </div>
                     <div class="form-group">
-                    <label for="codigo">Código:</label>
-                        <input type="number" name="codigo" class="form-control">
+                        <label for="des">Descrição:</label>
+                        <input type="text" name="des" class="form-control">
                     </div>
                 </div>
             `;
@@ -140,16 +159,30 @@
             `;
         }
     }
+            // Adiciona um listener para o evento de mudança no select de ação
+            document.getElementById("acao").addEventListener("change", function() {
+            var acao = this.value;
+
+            // Redireciona para a página correspondente
+            if (acao === 'adicionar') {
+                window.location.href = "adicionar-inventario.php";
+            } else if (acao === 'editar') {
+                window.location.href = "editar-inventario.php";
+            } else if (acao === 'consultar') {
+                window.location.href = "consultar-inventario.php";
+            } else if (acao === 'atribuir') {
+                window.location.href = "atribuir-inventario.php";
+            } else if (acao === 'eliminar') {
+                window.location.href = "eliminar-inventario.php";
+            }
+        });
     </script>
-
-
 
 <?php
 // Verifica se o formulário foi enviado
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Obtém os valores enviados do formulário
     $opcao = $_POST["opcao"];
-
 
     $conn = new mysqli($bd_host, $bd_user, $bd_password, $bd_database);
 
@@ -161,13 +194,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Insere os dados na tabela correspondente
     if ($opcao === "instrumento") {
         $instrumento = $_POST["instrumento"];
-        if (isset($_POST["codigo"])) {
-            $codigo = $_POST["codigo"];
-        } else {
-            $codigo = null;
-        }
-        if (!empty($instrumento) && !empty($codigo)) {
-            $sql = "INSERT INTO instrumentos (cat, codigo, estado) VALUES ('$instrumento', $codigo, 0)";
+        $des = $_POST["des"];
+        if (!empty($instrumento)) {
+            $sql = "INSERT INTO instrumentos (cat, des) VALUES ('$instrumento', '$des')";
             if ($conn->query($sql) === TRUE) {
                 echo '<div style="width: 70%; margin: auto;" class="alert alert-success mt-4">Dados do instrumento inseridos com sucesso!</div>';
             } else {
@@ -191,9 +220,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 }
 ?>
 
-    <?php
-        include "footer-reservado.php";
-    ?>
+<?php
+    include "footer-reservado.php";
+?>
 
 </body>
 </html>

@@ -7,7 +7,7 @@ if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
 
-if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
+if (empty($_SESSION["session_id"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
 }
@@ -84,7 +84,7 @@ $adicionar_socio = 0; // Defina um valor padrão para $adicionar_socio
 // Process form submission and insert data into the database
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $user = $_POST["user"];
-    $regime = $_POST["regime"];
+    $turma = $_POST["turma"];
     $tipo_regime = $_POST["tipo_regime"];
     $instrumento1 = $_POST["instrumento1"];
     $prof_in1 = $_POST["prof_in1"];
@@ -94,31 +94,25 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $dur2 = $_POST["dur2"];
     $formacao = $_POST["formacao"];
     $orquestra = $_POST["orquestra"];
+    $instrumento_orq = $_POST["instrumento_orq"];
     $coro = $_POST["coro"];
-    $in_alg = $_POST["in_alg"];
-    $desc_irmaos = $_POST["desc_irmaos"];
-    $quotaee = isset($_POST["quotaee"]) ? $_POST["quotaee"] : "1";
 
-    $adicionar_socio = isset($_POST["adicionar_socio"]) ? $_POST["adicionar_socio"] : 0;
+    $grau_instrumento1 = $_POST["grau_instrumento1"];
+    $grau_instrumento2 = $_POST["grau_instrumento2"];
+    $grau_formacao = $_POST["grau_formacao"];
+    $grau_orq = $_POST["grau_orq"];
+    $grau_coro = $_POST["grau_coro"];
 
-    
-    // Atualização da coluna "irmaos" com base na seleção do usuário
-    $irmaos = ($_POST["irmaos"] == "1") ? 1 : 0;
 
-    // Atualização da coluna "user_irmaos" com base na seleção do usuário
-    $user_irmaos = ($_POST["irmaos"] == "1") ? $_POST["user_irmaos"] : null;
 
-    $mem_bs = $_POST["mem_bs"];
 
 
     // Insert the data into the database
-    $insert_query = "UPDATE alunos SET regime = ?, tipo_regime = ?, cod_in1 = ?, prof_in1 = ?, dur1 = ?, cod_in2 = ?, prof_in2 = ?, dur2 = ?, cod_fm = ?, cod_orq = ?, cod_coro = ?, in_alg = ?, irmaos = ?, user_irmaos = ?, desc_irmaos = ?, quota_socio = ?, mem_bs = ? WHERE user = ?";
+    $insert_query = "UPDATE alunos SET turma = ?, tipo_regime = ?, cod_in1 = ?, prof_in1 = ?, dur1 = ?, cod_in2 = ?, prof_in2 = ?, dur2 = ?, cod_fm = ?, cod_orq = ?, cod_in_orq = ?, cod_coro = ?, grau_in1 = ?, grau_in2 = ?, grau_fm = ?, grau_orq = ?, grau_coro = ? WHERE user = ?";
     $stmt = $mysqli->prepare($insert_query);
-    $insert_query = "UPDATE instrumentos SET estado = ?, user = ? WHERE codigo = ?";
-    $stmti = $mysqli->prepare($insert_query);
-    
+
     if ($stmt) {
-        $stmt->bind_param("iiisiisiiiiiisiiis", $regime, $tipo_regime, $instrumento1, $prof_in1, $dur1, $instrumento2, $prof_in2, $dur2, $formacao, $orquestra, $coro, $in_alg, $irmaos, $user_irmaos, $desc_irmaos, $quotaee, $mem_bs, $user);
+        $stmt->bind_param("siisiisiiiiiiiiiis", $turma, $tipo_regime, $instrumento1, $prof_in1, $dur1, $instrumento2, $prof_in2, $dur2, $formacao, $orquestra, $instrumento_orq, $coro, $grau_instrumento1, $grau_instrumento2, $grau_formacao, $grau_orq, $grau_coro, $user);
 
         if ($stmt->execute()) {
             // Data inserted successfully, redirect to a success page or display a success message
@@ -133,85 +127,39 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         // In case there is an error in the query, display an error message or handle it appropriately
         $errorMessage = 'Erro na preparação da declaração: ' . $mysqli->error;
     }
-
-    if ($stmti) {
-        $cre = 1;
-        $stmti->bind_param("isi", $cre, $user, $in_alg);
-    
-        if ($stmti->execute()) {
-            // Data inserted successfully, redirect to a success page or display a success message
-            $successMessage = 'Dados atualizados com sucesso!';
-        } else {
-            // In case there is an error in the query, display an error message or handle it appropriately
-            $errorMessage = 'Erro ao atualizar dados.';
-        }
-    
-        $stmti->close();
-    } else {
-        // In case there is an error in the query, display an error message or handle it appropriately
-        $errorMessage = 'Erro na preparação da declaração: ' . $mysqli->error;
-    }
 }
 
-$instrumentos = array(); // Initialize the $instrumentos variable as an empty array
+$trumas = array(); // Initialize the $instrumentos variable as an empty array
 
-$query_ins = "SELECT i.cat, i.codigo, i.estado, i.user, u.nome
-           FROM instrumentos i
-           LEFT JOIN alunos a ON i.user = a.user
-           LEFT JOIN users1 u ON i.user = u.user";
+$query_turmas = "SELECT * from turmas_gerais";
 
-$resultado_ins = $mysqli->query($query_ins);
+$resultado_turmas = $mysqli->query($query_turmas);
 
-if ($resultado_ins) {
+if ($resultado_turmas) {
     // Loop to iterate through the results and add the instruments to the $instrumentos array
-    while ($row = $resultado_ins->fetch_assoc()) {
-        $instrumentos[] = $row;
+    while ($row = $resultado_turmas->fetch_assoc()) {
+        $turmas[] = $row;
     }
 } else {
     // In case there is an error in the query, display an error message or handle it appropriately
     echo "Erro na consulta: " . $mysqli->error;
 }
 
+// Consulta para obter os graus da tabela "graus"
+$query_graus = "SELECT id_grau, nome_grau FROM graus";
+$resultado_graus = $mysqli->query($query_graus);
 
-if ($adicionar_socio == "1") {
-    // Adicionar como sócio
-    $alunoData = obterDadosDoAluno($user);
-    if ($alunoData) {
-        // Insira os dados do aluno na tabela "socios"
-        $inserirSocio = $mysqli->prepare("INSERT INTO socios (nome, morada1, morada2, nif) VALUES (?, ?, ?, ?)");
-        $inserirSocio->bind_param("ssss", $alunoData["nome"], $alunoData["morada1"], $alunoData["morada2"], $alunoData["nif"]);
-        if ($inserirSocio->execute()) {
-            // Obter o último "num_socio" inserido na tabela "socios"
-            $ultimoNumSocio = $mysqli->query("SELECT MAX(num_socio) FROM socios")->fetch_row()[0];
-            // Inserir o valor de "num_socio" na tabela "alunos"
-            $inserirNumSocio = $mysqli->prepare("UPDATE alunos SET num_socio = ? WHERE user = ?");
-            $inserirNumSocio->bind_param("ss", $ultimoNumSocio, $user);
-            if ($inserirNumSocio->execute()) {
-                $k=1;
-            } else {
-                $k=1;
-            }
-        } else {
-            $errorMessage = 'Erro ao adicionar aluno como sócio.';
-        }
-    } else {
-        $errorMessage = 'Erro ao obter os dados do aluno.';
-    }
-}
+// Array para armazenar os graus
+$graus = array();
 
-if ($adicionar_socio == "2") {
-    // Já é sócio
-    $num_socio_selecionado = $_POST["num_socio_selecionado"];
-    if (!empty($num_socio_selecionado)) {
-        // Atualize o registro do aluno com o número de sócio selecionado
-        $inserirNumSocio = $mysqli->prepare("UPDATE alunos SET num_socio = ? WHERE user = ?");
-        $inserirNumSocio->bind_param("ss", $num_socio_selecionado, $user);
-        if ($inserirNumSocio->execute()) {
-            $k=1;
-        } else {
-            $k=1;
-        }
+if ($resultado_graus) {
+    // Loop para iterar pelos resultados e adicionar os graus ao array
+    while ($row = $resultado_graus->fetch_assoc()) {
+        $graus[] = $row;
     }
+} else {
+    // Em caso de erro na consulta, exibe uma mensagem de erro
+    echo "Erro na consulta de graus: " . $mysqli->error;
 }
 
 
@@ -237,8 +185,14 @@ if ($adicionar_socio == "2") {
         <img style="width: 100%; height: auto;" src="./media/topAR.png" class="img-responsive">
     </div>
 
-    <?php
-        include "header-direcao.php";
+    <?php 
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
+            include "header-direcao.php"; 
+        } 
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        } 
+
     ?>
 
     <div class="container">
@@ -260,18 +214,20 @@ if ($adicionar_socio == "2") {
             <?php endforeach; ?>
         </select>
         </div>
-        <button style="background-color: #00631b; border-color: black;" id="prosseguir-btn" class="btn btn-primary">Prosseguir</button>
+        <button style="background-color: #00631b; border-color: black;" id="prosseguir-btn" class="btn btn-primary" onclick="carregarInformacoesAluno()">Prosseguir</button>
         <div id="formulario" style="display: none;">
             <h3>Formulário de Dados do Aluno</h3>
             <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
             <div class="mb-3">
-                    <label for="regime" class="form-label">Regime</label>
-                    <select name="regime" id="regime" class="form-select" required>
-                        <option value="4">Pré-Iniciação</option>
-                        <option value="1">Iniciação</option>
-                        <option value="2">Básico</option>
-                        <option value="3">Secundário</option>
-                    </select>
+                <label for="turma" class="form-label">Turma</label>
+                <select id="turma" name="turma" class="form-select" required>
+                    <option value="0">Não Aplicável</option>
+                    <?php foreach ($turmas as $turma): ?>
+                        <option value="<?php echo $turma['cod_turma']; ?>">
+                            <?php echo $turma['cod_turma'] . ' - ' . $turma['nome_turma'];?>
+                        </option>
+                    <?php endforeach; ?> 
+                </select>
             </div>
             <div class="mb-3">
                     <label for="tipo_regime" class="form-label">Regime</label>
@@ -286,6 +242,7 @@ if ($adicionar_socio == "2") {
                         <option value="8">Coro e Ensemble</option>
                     </select>
             </div>
+            <br>
                 <div class="mb-3">
                     <label for="instrumento1" class="form-label">1.º Instrumento</label>
                     <select id="instrumento1" name="instrumento1" class="form-select" required>
@@ -307,18 +264,31 @@ if ($adicionar_socio == "2") {
                         <option value="20">Bombardino</option>
                         <option value="21">Canto</option>
                     </select>
-                    <label for="prof_in1" class="form-label">Professor 1.º Instrumento</label>
-                    <select id="prof_in1" name="prof_in1" class="form-select" required>
-                        <option value="0">Não Aplicável</option>
-                        <?php foreach ($professores as $professor): ?>
-                            <option value="<?php echo $professor['user']; ?>">
-                                <?php echo $professor['user'] . ' - ' . $professor['nome'] . ' (' . $professor['nome_dis'] . ')'; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <label for="dur1" class="form-label">Duração da Aula (1.º Instrumento)</label>
-                    <input type="number" name="dur1" id="dur1" class="form-control" min="0">
+                    <div id="instrumento_1_div" style="display: none;">
+                        <label for="prof_in1" class="form-label">Professor 1.º Instrumento</label>
+                        <select id="prof_in1" name="prof_in1" class="form-select" required>
+                            <option value="0">Não Aplicável</option>
+                            <?php foreach ($professores as $professor): ?>
+                                <option value="<?php echo $professor['user']; ?>">
+                                    <?php echo $professor['user'] . ' - ' . $professor['nome'] . ' (' . $professor['nome_dis'] . ')'; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <label for="dur1" class="form-label">Duração da Aula (1.º Instrumento)</label>
+                        <input type="number" name="dur1" id="dur1" class="form-control" min="0">
+                        <label for="grau_instrumento1" class="form-label">Grau</label>
+                        <select id="grau_instrumento1" name="grau_instrumento1" class="form-select">
+                            <option value="0">Não Aplicável</option>
+                            <!-- Loop para iterar pelos graus e criar as opções do select -->
+                            <?php foreach ($graus as $grau): ?>
+                                <option value="<?php echo $grau['id_grau']; ?>">
+                                    <?php echo $grau['nome_grau']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
+                <br>
                 <div class="mb-3">
                     <label for="instrumento2" class="form-label">2.º Instrumento</label>
                     <select id="instrumento2" name="instrumento2" class="form-select" required>
@@ -339,24 +309,50 @@ if ($adicionar_socio == "2") {
                         <option value="19">Contrabaixo</option>
                         <option value="20">Bombardino</option>
                     </select>
-                    <label for="prof_in2" class="form-label">Professor 2.º Instrumento</label>
-                    <select id="prof_in2" name="prof_in2" class="form-select" required>
-                        <option value="0">Não Aplicável</option>
-                        <?php foreach ($professores as $professor): ?>
-                            <option value="<?php echo $professor['user']; ?>">
-                                <?php echo $professor['user'] . ' - ' . $professor['nome'] . ' (' . $professor['nome_dis'] . ')'; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <label for="dur2" class="form-label">Duração da Aula (2.º Instrumento)</label>
-                    <input type="number" name="dur2" id="dur2" class="form-control" min="0">
+                    <div id="instrumento_2_div" style="display: none;">
+                        <label for="prof_in2" class="form-label">Professor 2.º Instrumento</label>
+                        <select id="prof_in2" name="prof_in2" class="form-select" required>
+                            <option value="0">Não Aplicável</option>
+                            <?php foreach ($professores as $professor): ?>
+                                <option value="<?php echo $professor['user']; ?>">
+                                    <?php echo $professor['user'] . ' - ' . $professor['nome'] . ' (' . $professor['nome_dis'] . ')'; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <label for="dur2" class="form-label">Duração da Aula (2.º Instrumento)</label>
+                        <input type="number" name="dur2" id="dur2" class="form-control" min="0">
+                        <label for="grau_instrumento2" class="form-label">Grau</label>
+                        <select id="grau_instrumento2" name="grau_instrumento2" class="form-select">
+                            <option value="0">Não Aplicável</option>
+                            <!-- Loop para iterar pelos graus e criar as opções do select -->
+                            <?php foreach ($graus as $grau): ?>
+                                <option value="<?php echo $grau['id_grau']; ?>">
+                                    <?php echo $grau['nome_grau']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
+                <br>
                 <div class="mb-3">
                     <label for="formacao" class="form-label">Formação Musical</label>
                     <select id="formacao" name="formacao" class="form-select" required>
                         <option value="0">Não Aplicável</option>
-                        <option value="1">Sim</option>
+                        <option value="1">Sim (Iniciação)</option>
+                        <option value="2">Sim</option>
                     </select>
+                    <div id="formacao-div">
+                        <label for="grau_formacao" class="form-label">Grau</label>
+                        <select id="grau_formacao" name="grau_formacao" class="form-select">
+                            <option value="0">Não Aplicável</option>
+                            <!-- Loop para iterar pelos graus e criar as opções do select -->
+                            <?php foreach ($graus as $grau): ?>
+                                <option value="<?php echo $grau['id_grau']; ?>">
+                                    <?php echo $grau['nome_grau']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label for="orquestra" class="form-label">Orquestra</label>
@@ -364,6 +360,37 @@ if ($adicionar_socio == "2") {
                         <option value="0">Não Aplicável</option>
                         <option value="11">Orquestra Juvenil</option>
                     </select>
+                    <div id="instrumento_orq_div" style="display: none;">
+                        <label for="instrumento_orq" class="form-label">Instrumento Orquestra</label>
+                        <select id="instrumento_orq" name="instrumento_orq" class="form-select">
+                            <option value="0">Não Aplicável</option>
+                            <option value="3">Clarinete</option>
+                            <option value="4">Saxofone</option>
+                            <option value="5">Tuba</option>
+                            <option value="6">Trombone</option>
+                            <option value="7">Trompa</option>
+                            <option value="8">Percussão</option>
+                            <option value="12">Violino</option>
+                            <option value="13">Viola d'Arco</option>
+                            <option value="14">Violoncelo</option>
+                            <option value="15">Piano</option>
+                            <option value="16">Guitarra</option>
+                            <option value="17">Flauta Transversal</option>
+                            <option value="18">Trompete</option>
+                            <option value="19">Contrabaixo</option>
+                            <option value="20">Bombardino</option>
+                        </select>
+                        <label for="grau_orq" class="form-label">Grau</label>
+                        <select id="grau_orq" name="grau_orq" class="form-select">
+                            <option value="0">Não Aplicável</option>
+                            <!-- Loop para iterar pelos graus e criar as opções do select -->
+                            <?php foreach ($graus as $grau): ?>
+                                <option value="<?php echo $grau['id_grau']; ?>">
+                                    <?php echo $grau['nome_grau']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label for="coro" class="form-label">Coro</label>
@@ -372,78 +399,18 @@ if ($adicionar_socio == "2") {
                         <option value="9">Coro Infantil</option>
                         <option value="10">Coro Juvenil</option>
                     </select>
-                </div>
-                <div class="mb-3">
-                    <label for="in_alg" class="form-label">Instrumento Alugado</label>
-                    <select id="in_alg" name="in_alg" class="form-select" required>
-                        <option value="0">Não Aplicável</option>
-                        <?php foreach ($instrumentos as $instrumento): ?>
-                            <option value="<?php echo $instrumento['codigo']; ?>">
-                                <?php echo $instrumento['codigo'] . ' - ' . $instrumento['cat'];
-                                if ($instrumento['estado'] == 1) {
-                                    echo ' (' . $instrumento['user'] . ' - ' . $instrumento['nome'] . ')';
-                                }
-                                ?>
-                            </option>
-                        <?php endforeach; ?> 
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="irmaos" class="form-label">Tem irmãos?</label>
-                    <select name="irmaos" id="irmaos" class="form-select" required onchange="showSiblingSelect(this)">
-                        <option value="0">Não</option>
-                        <option value="1">Sim</option>
-                    </select>
-                </div>
-
-                <div id="user_irmaos" style="display: none;" class="mb-3">
-                    <label for="user_irmaos" class="form-label">Selecionar irmão:</label>
-                    <select name="user_irmaos" id="user_irmaos" class="form-select">
-                        <option value="">Selecione o irmão</option>
-                        <?php
-                        // Loop through the $alunos array to populate sibling options
-                        foreach ($alunos as $aluno) {
-                            echo '<option value="' . $aluno['user'] . '">' . $aluno['user'] . ' - ' . $aluno['nome'] . '</option>';
-                        }
-                        ?>
-                    </select>
-                    <input type="checkbox" id="elegivel1" name="elegivel1" value="0" onchange="updateDescIrmaos()"/>
-                    <label for="elegivel1"> Elegível para desconto irmãos? </label>
-                    <input type="checkbox" id="elegivel2" name="elegivel2" value="0" onchange="updateDescIrmaos()"/>
-                    <label for="elegivel2"> Desconto 2.º irmão? </label>
-                    <input type="hidden" name="desc_irmaos" id="desc_irmaos" value="0">
-                    <input type="checkbox" id="quotaee_input" name="quotaee" value="1" onchange="updateDescIrmaos()"/>
-                    <label for="quotaee"> Paga quota juntamente com o E.E.? </label>
-                </div>
-                <div class="mb-3">
-                    <label for="mem_bs" class="form-label">Membro da Banda Sinfónica:</label>
-                    <select name="mem_bs" id="mem_bs" class="form-select" required>
-                        <option value="0">Não</option>
-                        <option value="1">Sim</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="adicionar_socio" class="form-label">Adicionar como sócio?</label>
-                    <select name="adicionar_socio" id="adicionar_socio" class="form-select">
-                        <option value="1">Sim</option>
-                        <option value="2">Já é sócio</option>
-                    </select>
-                </div>
-                <div id="num_socio_selecionado_div" style="display: none;" class="mb-3">
-                    <label for="num_socio_selecionado" class="form-label">Selecionar sócio existente:</label>
-                    <select name="num_socio_selecionado" id="num_socio_selecionado" class="form-select">
-                        <option value="">Selecione o sócio</option>
-                        <?php
-                        // Consulta a tabela "socios" para obter todos os sócios
-                        $query_socios = "SELECT num_socio, nome FROM socios";
-                        $resultado_socios = $mysqli->query($query_socios);
-                        if ($resultado_socios) {
-                            while ($row = $resultado_socios->fetch_assoc()) {
-                                echo '<option value="' . $row['num_socio'] . '">' . $row['num_socio'] . ' - ' . $row['nome'] . '</option>';
-                            }
-                        }
-                        ?>
-                    </select>
+                    <div id="coro-div">
+                        <label for="grau_coro" class="form-label">Grau</label>
+                        <select id="grau_coro" name="grau_coro" class="form-select">
+                            <option value="0">Não Aplicável</option>
+                            <!-- Loop para iterar pelos graus e criar as opções do select -->
+                            <?php foreach ($graus as $grau): ?>
+                                <option value="<?php echo $grau['id_grau']; ?>">
+                                    <?php echo $grau['nome_grau']; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
                 <input type="hidden" name="user" id="user">
                 <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit">Inserir Dados</button>
@@ -469,70 +436,162 @@ if ($adicionar_socio == "2") {
         const userField = document.getElementById('user');
         const prosseguirBtn = document.getElementById('prosseguir-btn');
         const formulario = document.getElementById('formulario');
+        const orquestraSelect = document.getElementById('orquestra');
+        const instrumento1Select = document.getElementById('instrumento1');
+        const instrumentoOrqDiv = document.getElementById('instrumento_orq_div');
+        const instrumento1Div = document.getElementById('instrumento_1_div');
 
         prosseguirBtn.addEventListener('click', function() {
             if (alunoSelect.value === '') {
                 alert('Selecione um aluno antes de prosseguir.');
             } else {
                 userField.value = alunoSelect.value;
-                formulario.style.display = 'block'; // Exibir o formulário
+                carregarInformacoesAluno(); // Carregar informações do aluno ao clicar em "Prosseguir"
             }
         });
 
-            function mostrarDuracao(selectElement) {
-                var duracaoDiv = document.getElementById("duracaoAula");
-                if (selectElement.value !== "0") {
-                    duracaoDiv.style.display = "block";
-                } else {
-                    duracaoDiv.style.display = "none";
-                }
+        function mostrarDuracao(selectElement) {
+            var duracaoDiv = document.getElementById("duracaoAula");
+            if (selectElement.value !== "0") {
+                duracaoDiv.style.display = "block";
+            } else {
+                duracaoDiv.style.display = "none";
             }
+        }
 
-            function showSiblingSelect(user_irmaosSelect) {
-                const siblingSelect = document.getElementById('user_irmaos');
-                
-                if (user_irmaosSelect.value === '1') {
-                    siblingSelect.style.display = 'block'; // Exibe o campo de seleção de irmãos
-                } else {
-                    siblingSelect.style.display = 'none'; // Oculta o campo de seleção de irmãos
-                }
+        orquestraSelect.addEventListener('change', function() {
+            if (this.value === '11') {
+                instrumentoOrqDiv.style.display = 'block';
+            } else {
+                instrumentoOrqDiv.style.display = 'none';
             }
+        });
 
-            function updateDescIrmaos() {
-                var descIrmaosInput = document.getElementById('desc_irmaos');
-                var irmaos1Checkbox = document.getElementById('elegivel1');
-                var irmaos2Checkbox = document.getElementById('elegivel2');
-
-                if (irmaos1Checkbox.checked) {
-                    descIrmaosInput.value = "1";
-                } 
-                else if (irmaos2Checkbox.checked) {
-                    descIrmaosInput.value = "2";
-                }
-                else {
-                    descIrmaosInput.value = "0";
-                }
-
-                var quotaeeInput = document.getElementById('quotaee_input');
-                if (quotaeeInput.checked) {
-                    quotaeeInput.value = "2"; // Define o valor como 2 quando a checkbox está selecionada
-                } else {
-                    quotaeeInput.value = "1"; // Define o valor como 1 quando a checkbox não está selecionada
-                }
+        instrumento1Select.addEventListener('change', function() {
+            if (this.value !== '0') {
+                instrumento1Div.style.display = 'block';
+            } else {
+                instrumento1Div.style.display = 'none';
             }
+        });
 
-            const adicionarSocioSelect = document.getElementById('adicionar_socio');
-            const numSocioSelecionadoDiv = document.getElementById('num_socio_selecionado_div');
+        const instrumento2Select = document.getElementById('instrumento2');
+        const instrumento2Div = document.getElementById('instrumento_2_div');
 
-            adicionarSocioSelect.addEventListener('change', function() {
-                if (adicionarSocioSelect.value === '2') {
-                    numSocioSelecionadoDiv.style.display = 'block';
-                } else {
-                    numSocioSelecionadoDiv.style.display = 'none';
-                }
-            });
+        instrumento2Select.addEventListener('change', function() {
+            if (this.value !== '0') {
+                instrumento2Div.style.display = 'block';
+            } else {
+                instrumento2Div.style.display = 'none';
+            }
+        });
+
+        // Adicione isso ao final do script JavaScript existente
+        const formacaoSelect = document.getElementById('formacao');
+        const formacaoDiv = document.getElementById('formacao-div');
+        const coroSelect = document.getElementById('coro');
+        const coroDiv = document.getElementById('coro-div');
+
+        formacaoSelect.addEventListener('change', function() {
+            if (this.value !== '0') {
+                formacaoDiv.style.display = 'block';
+            } else {
+                formacaoDiv.style.display = 'none';
+            }
+        });
+
+        coroSelect.addEventListener('change', function() {
+            if (this.value !== '0') {
+                coroDiv.style.display = 'block';
+            } else {
+                coroDiv.style.display = 'none';
+            }
+        });
+
+
+
+        function carregarInformacoesAluno() {
+            const alunoSelect = document.getElementById('aluno');
+            const userField = document.getElementById('user');
+
+            // Verifica se um aluno foi selecionado
+            if (alunoSelect.value !== '') {
+                // Faz uma requisição AJAX para obter as informações do aluno
+                $.ajax({
+                    type: 'POST',
+                    url: 'obterDadosDoAluno1.php', // Substitua pelo caminho do arquivo que irá processar a requisição
+                    data: { user: alunoSelect.value },
+                    success: function (data) {
+                        // Preenche os campos do formulário com as informações do aluno
+                        const alunoData = JSON.parse(data);
+
+                        // Preenche os campos do formulário
+                        document.getElementById('turma').value = alunoData.turma;
+                        document.getElementById('tipo_regime').value = alunoData.tipo_regime;
+                        document.getElementById('instrumento1').value = alunoData.cod_in1;
+                        document.getElementById('prof_in1').value = alunoData.prof_in1;
+                        document.getElementById('dur1').value = alunoData.dur1;
+                        document.getElementById('instrumento2').value = alunoData.cod_in2;
+                        document.getElementById('prof_in2').value = alunoData.prof_in2;
+                        document.getElementById('dur2').value = alunoData.dur2;
+                        document.getElementById('formacao').value = alunoData.cod_fm;
+                        document.getElementById('orquestra').value = alunoData.cod_orq;
+                        document.getElementById('instrumento_orq').value = alunoData.cod_in_orq;
+                        document.getElementById('coro').value = alunoData.cod_coro;
+                        document.getElementById('grau_instrumento1').value = alunoData.grau_in1;
+                        document.getElementById('grau_instrumento2').value = alunoData.grau_in2;
+                        document.getElementById('grau_formacao').value = alunoData.grau_fm;
+                        document.getElementById('grau_orq').value = alunoData.grau_orq;
+                        document.getElementById('grau_coro').value = alunoData.grau_coro;
+
+                        // Verifica o valor de cod_orq e exibe/esconde o campo "Instrumento Orquestra" conforme necessário
+                        if (alunoData.cod_orq == '11') { // Use '==' para comparação de valor
+                            instrumentoOrqDiv.style.display = 'block';
+                        } else {
+                            instrumentoOrqDiv.style.display = 'none';
+                        }
+
+                        // Verifica o valor de instrumento1 e exibe/esconde o campo do primeiro instrumento conforme necessário
+                        if (alunoData.cod_in1 != '0') { // Use '==' para comparação de valor
+                            instrumento1Div.style.display = 'block';
+                        } else {
+                            instrumento1Div.style.display = 'none';
+                        }
+
+                        // Verifica o valor de instrumento1 e exibe/esconde o campo do primeiro instrumento conforme necessário
+                        if (alunoData.cod_in2 != '0') { // Use '==' para comparação de valor
+                            instrumento2Div.style.display = 'block';
+                        } else {
+                            instrumento2Div.style.display = 'none';
+                        }
+
+                        // Lógica para mostrar ou ocultar a subdivisão do coro
+                        if (alunoData.cod_coro != '0') {
+                            coroDiv.style.display = 'block';
+                        } else {
+                            coroDiv.style.display = 'none';
+                        }
+
+                        // Lógica para mostrar ou ocultar a subdivisão da formação musical
+                        if (alunoData.cod_fm != '0') {
+                            formacaoDiv.style.display = 'block';
+                        } else {
+                            formacaoDiv.style.display = 'none';
+                        }
+
+                        // Exibe o formulário após carregar as informações
+                        formulario.style.display = 'block';
+                    },
+                    error: function () {
+                        alert('Erro ao carregar as informações do aluno.');
+                    }
+                });
+            }
+        }
 
     </script>
+
+
 </body>
 
 <?php

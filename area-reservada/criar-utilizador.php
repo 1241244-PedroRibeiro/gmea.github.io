@@ -6,7 +6,7 @@ $mysqli = new mysqli($bd_host, $bd_user, $bd_password, $bd_database);
 if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
-if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["user"]) && empty($_POST["password"]) || $_SESSION["type"]!=3) {
+if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["user"]) && empty($_POST["password"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
 }
@@ -45,19 +45,15 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
 </head>
 
 <body>
-    <div style="margin-top: 0;">
-        <img style="width: 100%; height: auto;" src="./media/topAR.png" class="img-responsive">
-    </div>
-
-    <?php
-    include "header-direcao.php";
-    ?>
 
     <?php
 
     // Função para obter o último usuário da categoria
     function obterUltimoUsuario($conexao, $tipo)
     {
+        if ($tipo == 4 || $tipo == 5) {
+            $tipo = 3;
+        }
         $query = "SELECT MAX(user) FROM users1 WHERE type = $tipo";
         $resultado = mysqli_query($conexao, $query);
         $ultimoUsuario = mysqli_fetch_array($resultado)[0];
@@ -76,16 +72,21 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
         }
         $letraTipo = obterLetraTipo($tipo);
         $novoUsuario = $letraTipo . $novoNumero;
-    
+
         // Inserir na tabela 'users1'
         $query = "INSERT INTO users1 (user, nome, morada1, morada2, nif, cc, data_nas, email, telef, password, type, foto) VALUES ('$novoUsuario', '$nome', '$morada1', '$morada2', '$nif', '$cc', '$data_nas', '$email', '$telef', '$password', $tipo, '$foto')";
         mysqli_query($conexao, $query);
-    
+
         if ($tipo === 1) { // Se for um aluno
             inserirAluno($conexao, $novoUsuario);
         }
-    
-        echo "Novo usuário inserido: " . $novoUsuario;
+
+        // Exibir a mensagem de sucesso em um modal
+        echo "<script>
+                $(document).ready(function() {
+                    $('#successModal').modal('show');
+                });
+            </script>";
     }
 
     // Função para obter a letra correspondente ao tipo
@@ -98,17 +99,45 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
                 return 'p';
             case 3:
                 return 'd';
+            case 4:
+                return 'd';
+            case 5:
+                return 'd';
         }
     }
 
     // Função para inserir um novo aluno na tabela "alunos"
     function inserirAluno($conexao, $userID)
     {
-        $queryAlunos = "INSERT INTO alunos (user, cod_in1, prof_in1, cod_in2, prof_in2, cod_fm, cod_orq, cod_coro, in_alg, regime, tipo_regime, irmaos, user_irmaos, mem_bs) VALUES ('$userID', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)";
+        $queryAlunos = "INSERT INTO alunos (user, cod_in1, prof_in1, cod_in2, prof_in2, cod_fm, cod_orq, cod_coro, regime, tipo_regime, irmaos, mem_bs) VALUES ('$userID', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)";
         mysqli_query($conexao, $queryAlunos);
     }
 
     ?>
+
+    <!-- Adicione esta parte no final do seu arquivo criar-utilizador.php -->
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="successModalLabel">Sucesso!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Utilizador inserido com sucesso!
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="redirectBack()">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function redirectBack() {
+            window.location.href = 'gerir-utilizadores.php';
+        }
+    </script>
 
     <div class="container">
         <h2 class="mt-5 text-center">Formulário de Inserção de Utilizador</h2>
@@ -159,6 +188,8 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
                     <option value="1">Aluno</option>
                     <option value="2">Professor</option>
                     <option value="3">Membro da Direção</option>
+                    <option value="4">Membro da Direção e Professor</option>
+                    <option value="5">Secretaria</option>
                 </select>
             </div>
 
@@ -199,6 +230,10 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
                     inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, 2, $hashedPassword, $foto);
                 } elseif ($type === '3') {
                     inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, 3, $hashedPassword, $foto);
+                } elseif ($type === '4') {
+                    inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, 4, $hashedPassword, $foto);
+                } elseif ($type === '5') {
+                    inserirUsuario($conexao, $nome, $morada1, $morada2, $nif, $cc, $data_nas, $email, $telef, 5, $hashedPassword, $foto);
                 }
 
                 move_uploaded_file($_FILES['foto']['tmp_name'], $target_file);
@@ -210,7 +245,3 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
 </body>
 
 </html>
-
-<?php
-include "footer-reservado.php";
-?>

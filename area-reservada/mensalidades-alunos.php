@@ -7,7 +7,7 @@ if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
 
-if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
+if (empty($_SESSION["session_id"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
 }
@@ -15,7 +15,7 @@ if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
 $alunos = array(); // Initialize the $alunos variable as an empty array
 
 // Code to retrieve students from the database
-$query = "SELECT user, nome FROM users1 WHERE type=1"; // Replace "users1" with the correct table name that contains the students
+$query = "SELECT user, nome FROM users1 WHERE type=1 and estado=1"; // Replace "users1" with the correct table name that contains the students
 
 if (isset($_GET['search'])) {
     $search = $_GET['search'];
@@ -38,8 +38,9 @@ $user = ''; // Initialize the $user variable
 
 if (isset($_POST['aluno'])) {
     $user = $_POST['aluno'];
+    $mes = $_POST['mes']; // Capturando o valor do mês selecionado
 
-    $query = "SELECT regime, tipo_regime, dur1, dur2, cod_fm, cod_orq, cod_coro, in_alg, desc_irmaos, mem_bs, num_fatura FROM alunos WHERE user='$user'";
+    $query = "SELECT regime, tipo_regime, dur1, dur2, cod_fm, cod_orq, cod_coro, desc_irmaos, mem_bs, num_fatura FROM alunos WHERE user='$user'";
     $result = $mysqli->query($query);
 
     if ($result) {
@@ -52,7 +53,6 @@ if (isset($_POST['aluno'])) {
             $cod_fm = $row['cod_fm'];
             $cod_orq = $row['cod_orq'];
             $cod_coro = $row['cod_coro'];
-            $in_alg = $row['in_alg'];
             $desc_irmaos = $row['desc_irmaos'];
             $mem_bs = $row['mem_bs'];
             $num_fatura = $row['num_fatura'];
@@ -63,7 +63,7 @@ if (isset($_POST['aluno'])) {
         echo "Erro na consulta: " . $mysqli->error;
     }
 
-    $query = "SELECT nome, morada1, morada2, nif, email FROM users1 WHERE user='$user'";
+    $query = "SELECT nome, morada1, morada2, nif, email FROM users1 WHERE user='$user' and estado=1";
     $result = $mysqli->query($query);
 
     if ($result) {
@@ -114,9 +114,13 @@ if (isset($_POST['aluno'])) {
             $propina = $propina * .90;
         }
 
-        if ($in_alg != 0) {
-            if ($mem_bs != 1) {
-                $propina += 5;
+        if ($mem_bs != 1) {
+            $query = "SELECT codigo FROM instrumentos WHERE user = '$user'";
+            $result = $mysqli->query($query);
+
+            if ($result && $result->num_rows > 0) {
+                $row = $result->fetch_assoc();
+                $propina = $propina + 5;
             }
         }
         
@@ -160,9 +164,13 @@ if (isset($_POST['aluno'])) {
             $propina = $propina * .90;
         }
 
-        if ($in_alg != 0) {
-            if ($mem_bs != 1) {
-                $propina += 5;
+        if ($mem_bs != 1) {
+            $query = "SELECT codigo FROM instrumentos WHERE user = '$user'";
+            $result = $mysqli->query($query);
+
+            if ($result && $result->num_rows > 0) {
+                $row = $result->fetch_assoc();
+                $propina = $propina + 5;
             }
         }
         
@@ -210,9 +218,15 @@ if (isset($_POST['aluno'])) {
     <img style="width: 100%; height: auto;" src="./media/topAR.png" class="img-responsive">
 </div>
 
-<?php
-include "header-direcao.php";
-?>
+<?php 
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
+            include "header-direcao.php"; 
+        } 
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        } 
+
+    ?>
 
 <div class="container">
     <h2>Gerar Faturas - Mensalidades dos Alunos <?php echo (isset($_POST['aluno'])) ? '(' . $user . ' - ' . $nome . ')' : ''; ?></h2>
@@ -223,7 +237,7 @@ include "header-direcao.php";
                 <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit">Pesquisar</button>
             </div>
         </form>
-        <h3>Selecione um aluno:</h3>
+        <!-- Dentro do div #formini, adicione o select de meses -->
         <div class="mb-3">
             <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
                 <select id="aluno" name="aluno" class="form-select" required>
@@ -233,6 +247,19 @@ include "header-direcao.php";
                             <?php echo $aluno['user'] . ' - ' . $aluno['nome']; ?>
                         </option>
                     <?php endforeach; ?>
+                </select>
+                <br/>
+                <select id="mes" name="mes" class="form-select" required>
+                    <option value="">Selecione um mês</option>
+                    <?php
+                    $queryMeses = "SELECT id_mes, nome_mes FROM meses";
+                    $resultMeses = $mysqli->query($queryMeses);
+                    if ($resultMeses) {
+                        while ($rowMes = $resultMeses->fetch_assoc()) {
+                            echo '<option value="' . $rowMes['id_mes'] . '">' . $rowMes['nome_mes'] . '</option>';
+                        }
+                    }
+                    ?>
                 </select>
                 <br>
                 <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit">Selecionar</button>
@@ -283,7 +310,19 @@ include "header-direcao.php";
                 <input type="text" name="obs" id="obs" class="form-control">
             </div>
             <input type="hidden" name="num_fatura" value="<?php echo $num_fatura; ?>">
+            <input type="hidden" name="mes" value="<?php echo $mes; ?>">
             <button style="background-color: #00631b; border-color: black;" class="btn btn-primary" type="submit">Gerar Fatura</button>
+            <!-- Botão "Confirmar Pagamento" -->
+            <?php
+            $queryCheckPagamento = "SELECT * FROM mensalidades_alunos WHERE user = '$user' AND id_mes = '$mes'";
+            $resultCheckPagamento = $mysqli->query($queryCheckPagamento);
+
+            if ($resultCheckPagamento && $resultCheckPagamento->num_rows > 0) {
+                echo '<button class="btn btn-secondary" type="button" disabled>Pagamento já efetuado</button>';
+            } else {
+                echo '<button id="confirmarPagamento" class="btn btn-primary" type="button">Confirmar Pagamento</button>';
+            }
+            ?>
         </form>
     </div>
     <?php endif; ?>
@@ -292,6 +331,25 @@ include "header-direcao.php";
 <?php
 include "footer-reservado.php";
 ?>
+
+<!-- Modal de Sucesso -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="successModalLabel">Pagamento Confirmado!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                O pagamento foi efetuado com sucesso.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
     // JavaScript code to show/hide the form
@@ -303,6 +361,38 @@ include "footer-reservado.php";
             formulario.style.display = 'none';
         } else {
             formulario.style.display = 'block';
+        }
+    });
+
+    // JavaScript para desativar o botão "Confirmar Pagamento" se o pagamento já tiver sido efetuado
+    const confirmarPagamentoBtn = document.getElementById('confirmarPagamento');
+    const mesSelect = document.getElementById('mes');
+
+    confirmarPagamentoBtn.addEventListener('click', function() {
+        const userId = '<?php print($user); ?>';
+        const mesId = '<?php print($mes); ?>';
+
+
+        if (userId && mesId) {
+            // Enviar os dados para a inserção na tabela
+            const formData = new FormData();
+            formData.append('user', userId);
+            formData.append('id_mes', mesId);
+
+            // Realizar a requisição para inserir o pagamento
+            fetch('./inserir_pagamento.php', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    confirmarPagamentoBtn.disabled = true;
+                    confirmarPagamentoBtn.innerText = 'Pagamento já efetuado';
+                    const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                    successModal.show();
+                }
+            }).catch(error => {
+                console.error('Erro ao processar o pagamento:', error);
+            });
         }
     });
 </script>

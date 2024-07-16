@@ -1,6 +1,7 @@
 <?php
 session_start();
 include "./generals/config.php";
+ini_set('display_errors', 0);
 $mysqli = new mysqli($bd_host, $bd_user, $bd_password, $bd_database);
 
 $successMessage = $errorMessage = $warningMessage = '';
@@ -8,9 +9,27 @@ $successMessage = $errorMessage = $warningMessage = '';
 if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
-if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["user"]) && empty($_POST["password"]) || $_SESSION["type"] != 3) {
+if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["user"]) && empty($_POST["password"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
+}
+
+// Verifique se o formulário foi enviado
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Obtenha os valores enviados pelo formulário
+    $acao = $_POST["acao"];
+
+    // Redireciona para a página correspondente
+    if ($acao === 'adicionar') {
+        header("Location: adicionar-socio.php");
+        exit;
+    } elseif ($acao === 'editar') {
+        header("Location: editar-socio.php");
+        exit;
+    } elseif ($acao === 'eliminar') {
+        header("Location: eliminar-socios.php");
+        exit;
+    }
 }
 
 function decrementarNumerosSocio($conexao, $numSocioSelecionado)
@@ -74,6 +93,21 @@ if (isset($_POST['search'])) {
 <?php
 include "header-direcao.php";
 ?>
+
+<div class="mb-3 container">
+        <form action="" method="POST">
+            <div class="mb-3">
+                <label for="acao" class="form-label">Selecione uma ação:</label>
+                <select name="acao" id="acao" class="form-select">
+                    <option value="">Selecione</option>
+                    <option value="adicionar">Adicionar Sócio</option>
+                    <option value="editar">Editar Sócio</option>
+                    <option value="eliminar">Eliminar Sócio</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Ir</button>
+        </form>
+    </div>
 
 <div class="container">
     <h2 class="mt-5 text-center">Eliminar Sócio</h2>

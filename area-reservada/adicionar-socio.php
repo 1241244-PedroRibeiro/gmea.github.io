@@ -1,27 +1,98 @@
 <?php
 session_start();
+ini_set('display_errors', 0);
 include "./generals/config.php";
 $mysqli = new mysqli($bd_host, $bd_user, $bd_password, $bd_database);
 
 if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
-if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["user"]) && empty($_POST["password"]) || $_SESSION["type"] != 3) {
+
+if (empty($_SESSION["session_id"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
 }
 
-function inserirSocio($conexao, $nome, $morada1, $morada2, $nif)
-{
-    $query = "INSERT INTO socios (nome, morada1, morada2, nif) VALUES ('$nome', '$morada1', '$morada2', $nif)";
-    if (mysqli_query($conexao, $query)) {
-        echo "Novo sócio inserido com sucesso.";
-    } else {
-        echo "Erro ao inserir o sócio: " . mysqli_error($conexao);
+// Verifique se o formulário foi enviado
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    // Obtenha os valores enviados pelo formulário
+    $acao = $_POST["acao"];
+
+    // Redireciona para a página correspondente
+    if ($acao === 'adicionar') {
+        header("Location: adicionar-socio.php");
+        exit;
+    } elseif ($acao === 'editar') {
+        header("Location: editar-socio.php");
+        exit;
+    } elseif ($acao === 'eliminar') {
+        header("Location: eliminar-socios.php");
+        exit;
     }
 }
 
+// Função para inserir um sócio no banco de dados
+function inserirSocio($conexao, $nome, $morada1, $morada2, $nif, $aluno)
+{
+    // Obter o próximo número de sócio
+    $queryMaxNumSocio = "SELECT MAX(num_socio) AS max_num_socio FROM socios";
+    $resultadoMaxNumSocio = $conexao->query($queryMaxNumSocio);
+
+    if ($resultadoMaxNumSocio) {
+        $rowMaxNumSocio = $resultadoMaxNumSocio->fetch_assoc();
+        $max_num_socio = $rowMaxNumSocio['max_num_socio'];
+        $prox_num_socio = $max_num_socio + 1;
+    } else {
+        echo "Erro ao obter o próximo número de sócio: " . $conexao->error;
+        exit;
+    }
+
+    // Preparar a query de inserção usando uma instrução preparada
+    $query = "INSERT INTO socios (nome, morada1, morada2, nif, aluno, num_socio, data_added) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $stmt = $conexao->prepare($query);
+
+    if ($stmt) {
+        $currentDateTime = date('Y-m-d');
+        // Bind dos parâmetros e execução da query
+        $stmt->bind_param("sssisss", $nome, $morada1, $morada2, $nif, $aluno, $prox_num_socio, $currentDateTime);
+
+        if ($stmt->execute()) {
+            
+            if ($aluno != 0) {
+                // Atualizar o número do sócio na tabela 'alunos'
+                $stmtUpdate = $conexao->prepare("UPDATE alunos SET num_socio = ? WHERE user = ?");
+                $stmtUpdate->bind_param("is", $prox_num_socio, $aluno);
+                $stmtUpdate->execute();
+            }
+        } else {
+            echo "Erro ao inserir o sócio: " . $stmt->error;
+        }
+
+        // Fechar a declaração preparada
+        $stmt->close();
+    } else {
+        echo "Erro na preparação da declaração: " . $conexao->error;
+    }
+}
+
+$alunos = array(); // Inicialize a variável $alunos como um array vazio
+
+// Código para recuperar alunos do banco de dados
+$queryAlunos = "SELECT user, nome FROM users1 WHERE type = 1";
+
+$resultadoAlunos = $mysqli->query($queryAlunos);
+
+if ($resultadoAlunos) {
+    // Loop para iterar pelos resultados e adicionar os alunos ao array $alunos
+    while ($rowAluno = $resultadoAlunos->fetch_assoc()) {
+        $alunos[] = $rowAluno;
+    }
+} else {
+    echo "Erro na consulta de alunos: " . $mysqli->error;
+}
+
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -48,6 +119,22 @@ function inserirSocio($conexao, $nome, $morada1, $morada2, $nif)
     include "header-direcao.php";
     ?>
 
+    <div class="mb-3 container">
+        <form action="" method="POST">
+            <div class="mb-3">
+                <label for="acao" class="form-label">Selecione uma ação:</label>
+                <select name="acao" id="acao" class="form-select">
+                    <option value="">Selecione</option>
+                    <option value="adicionar">Adicionar Sócio</option>
+                    <option value="editar">Editar Sócio</option>
+                    <option value="eliminar">Eliminar Sócio</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Ir</button>
+        </form>
+    </div>
+
+
     <div class="container">
         <h2 class="mt-5 text-center">Formulário de Inserção de Sócio</h2>
         <form action="<?php echo $_SERVER['PHP_SELF']; ?>" method="post">
@@ -71,6 +158,18 @@ function inserirSocio($conexao, $nome, $morada1, $morada2, $nif)
                 <input type="number" id="nif" name="nif" class="form-control" required min="0">
             </div>
 
+            <div class="mb-3">
+                <label for="aluno" class="form-label">Aluno Correspondente:</label>
+                <select id="aluno" name="aluno" class="form-select" required>
+                    <option value="0">Não Aplicável</option>
+                    <?php foreach ($alunos as $aluno): ?>
+                        <option value="<?php echo $aluno['user']; ?>" data-user="<?php echo $aluno['user']; ?>">
+                            <?php echo $aluno['user'] . ' - ' . $aluno['nome']; ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
             <button style="background-color: #00631b; border-color: black;" type="submit" class="btn btn-primary">Inserir Sócio</button>
         </form>
 
@@ -82,9 +181,11 @@ function inserirSocio($conexao, $nome, $morada1, $morada2, $nif)
                 $morada1 = $_POST['morada1'];
                 $morada2 = $_POST['morada2'];
                 $nif = $_POST['nif'];
+                $aluno = $_POST['aluno'];
 
                 // Chame a função para inserir o sócio no banco de dados
-                inserirSocio($mysqli, $nome, $morada1, $morada2, $nif);
+                inserirSocio($mysqli, $nome, $morada1, $morada2, $nif, $aluno);
+                print("Dados registados com sucesso.");
                 ?>
             </div>
         <?php endif; ?>
@@ -95,4 +196,5 @@ function inserirSocio($conexao, $nome, $morada1, $morada2, $nif)
 
 <?php
 include "footer-reservado.php";
+$mysqli->close();
 ?>

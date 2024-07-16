@@ -7,7 +7,7 @@ if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
 
-if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
+if (empty($_SESSION["session_id"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
 }
@@ -63,10 +63,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     <img style="width: 100%; height: auto;" src="./media/topAR.png" class="img-responsive">
 </div>
 
-<?php
-include "header-direcao.php";
-?>
+<?php 
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
+            include "header-direcao.php"; 
+        } 
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        } 
 
+    ?>
 <div class="container mt-5">
     <!-- Formulário para informações do destinatário -->
     <form method="post" action="generals/pdf-fatura-base.php" class="mb-4" id="fatura-form">

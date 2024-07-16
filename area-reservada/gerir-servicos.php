@@ -7,9 +7,25 @@ if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
 
-if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
+if (empty($_SESSION["session_id"]) || $_SESSION["type"] < 3) {
     header("Location: ../index.php");
     exit;
+}
+
+$tipos_servicos = array(); // Initialize the $alunos variable as an empty array
+
+// Code to retrieve students from the database
+$query = "SELECT * FROM tipos_servicos"; 
+$resultado = $mysqli->query($query);
+
+if ($resultado) {
+    // Loop to iterate through the results and add the students to the $alunos array
+    while ($row = $resultado->fetch_assoc()) {
+        $tipos_servicos[] = $row;
+    }
+} else {
+    // In case there is an error in the query, display an error message or handle it appropriately
+    echo "Erro na consulta: " . $mysqli->error;
 }
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
@@ -17,12 +33,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $serviceDate = $_POST["date"];
         $serviceLocation = $_POST["location"];
         $serviceTime = $_POST['time'];
+        $serviceTimeEnd = $_POST['time_end']; // Novo campo: Hora Fim (prevista)
         $serviceType = $_POST["type"];
-
+    
         // Converte a hora para o formato 'hh:mm'
         $serviceTime = date('H:i', strtotime($serviceTime));
-
-        $query = "INSERT INTO servicos (data_servico, local_servico, tipo_servico, hora_servico, estado) VALUES ('$serviceDate', '$serviceLocation', '$serviceType', '$serviceTime', 1)";
+        $serviceTimeEnd = date('H:i', strtotime($serviceTimeEnd)); // Formatar Hora Fim
+    
+        $query = "INSERT INTO servicos (data_servico, local_servico, tipo_servico, hora_servico, hora_fim, estado) VALUES ('$serviceDate', '$serviceLocation', '$serviceType', '$serviceTime', '$serviceTimeEnd', 1)";
         if ($mysqli->query($query)) {
             echo '<br>';
             echo '<div class="alert alert-success" role="alert">Serviço adicionado com sucesso!</div>';
@@ -31,14 +49,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             echo '<div class="alert alert-danger" role="alert">Erro ao adicionar serviço. Por favor, tente novamente.</div>';
         }
     } else if ($_POST["action"] == "update") {
-            $serviceID = $_POST["id"];
-            $serviceDate = $_POST["date"];
-            $serviceLocation = $_POST["location"];
-            $updatedServiceTime = $_POST["time"];
-            $updatedServiceType = $_POST["type"];
-            
-            $query = "UPDATE servicos SET data_servico='$serviceDate', local_servico='$serviceLocation', hora_servico='$updatedServiceTime', tipo_servico='$updatedServiceType' WHERE id_servico='$serviceID'";        
-            if ($mysqli->query($query)) {
+        $serviceID = $_POST["id"];
+        $serviceDate = $_POST["date"];
+        $serviceLocation = $_POST["location"];
+        $updatedServiceTime = $_POST["time"];
+        $updatedServiceTimeEnd = $_POST["time_end"]; // Novo campo: Nova Hora Fim (prevista)
+        $updatedServiceType = $_POST["type"];
+    
+        // Converte a hora para o formato 'hh:mm'
+        $updatedServiceTime = date('H:i', strtotime($updatedServiceTime));
+        $updatedServiceTimeEnd = date('H:i', strtotime($updatedServiceTimeEnd)); // Formatar Nova Hora Fim
+    
+        $query = "UPDATE servicos SET data_servico='$serviceDate', local_servico='$serviceLocation', hora_servico='$updatedServiceTime', hora_fim='$updatedServiceTimeEnd', tipo_servico='$updatedServiceType' WHERE id_servico='$serviceID'";
+        if ($mysqli->query($query)) {
                 echo '<br>';
                 echo '<div class="alert alert-success" role="alert">Serviço atualizado com sucesso!</div>';
             } else {
@@ -61,8 +84,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit;
 }
 
+$currentDate = date('Y-m-d');
 // Obter os serviços existentes
-$serviceQuery = "SELECT id_servico, data_servico, local_servico FROM servicos WHERE estado = 1";
+$serviceQuery = "SELECT id_servico, data_servico, local_servico FROM servicos WHERE estado = 1 AND data_servico >= '$currentDate'";
 $serviceResult = $mysqli->query($serviceQuery);
 $services = [];
 while ($row = $serviceResult->fetch_assoc()) {
@@ -91,8 +115,14 @@ while ($row = $serviceResult->fetch_assoc()) {
     </div>
 
     <?php
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
         include "header-direcao.php";
+        }
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        }
     ?>
+
 
 
     <div class="container">
@@ -125,6 +155,11 @@ while ($row = $serviceResult->fetch_assoc()) {
                         <label for="serviceTime" class="form-label">Hora do Serviço:</label>
                         <input type="time" class="form-control" id="serviceTime" required>
                     </div>
+                    <!-- No formulário de adição de serviço -->
+                    <div class="mb-3">
+                        <label for="serviceTimeEnd" class="form-label">Hora Fim (Prevista) do Serviço:</label>
+                        <input type="time" class="form-control" id="serviceTimeEnd" name="time_end" required>
+                    </div>
                     <div class="mb-3">
                         <label for="serviceLocation" class="form-label">Local do Serviço:</label>
                         <input type="text" class="form-control" id="serviceLocation" required>
@@ -132,14 +167,12 @@ while ($row = $serviceResult->fetch_assoc()) {
                     <div class="mb-3">
                         <label for="serviceType" class="form-label">Tipo de Serviço:</label>
                         <select class="form-select" id="serviceType" required>
-                            <option value="">-- Selecione --</option>
-                            <option value="Concerto">Concerto</option>
-                            <option value="Procissão">Procissão</option>
-                            <option value="Missa">Missa</option>
-                            <option value="Casamento">Casamento</option>
-                            <option value="Missa + Procissão">Missa + Procissão</option>
-                            <option value="Procissão + Concerto">Procissão + Concerto</option>
-                            <option value="Missa + Procissão + Concerto">Missa + Procissão + Concerto</option>
+                            <option value="">Selecionar um Tipo de Servico</option>
+                            <?php foreach ($tipos_servicos as $tipo): ?>
+                                <option value="<?php echo $tipo['id_tipo']; ?>">
+                                    <?php echo $tipo['tipo_servico']; ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <button style="background-color: #00631b; border-color: black;" type="submit" class="btn btn-primary">Inserir</button>
@@ -174,16 +207,18 @@ while ($row = $serviceResult->fetch_assoc()) {
                         <input type="time" class="form-control" id="serviceTimeUpdate" required>
                     </div>
                     <div class="mb-3">
+                        <label for="serviceTimeUpdateEnd" class="form-label">Nova Hora Fim (Prevista) do Serviço:</label>
+                        <input type="time" class="form-control" id="serviceTimeUpdateEnd" name="time_end" required>
+                    </div>
+                    <div class="mb-3">
                         <label for="serviceTypeUpdate" class="form-label">Tipo de Serviço:</label>
                         <select class="form-select" id="serviceTypeUpdate" required>
-                            <option value="">-- Selecione --</option>
-                            <option value="Concerto">Concerto</option>
-                            <option value="Procissão">Procissão</option>
-                            <option value="Missa">Missa</option>
-                            <option value="Casamento">Casamento</option>
-                            <option value="Missa + Procissão">Missa + Procissão</option>
-                            <option value="Procissão + Concerto">Procissão + Concerto</option>
-                            <option value="Missa + Procissão + Concerto">Missa + Procissão + Concerto</option>
+                            <option value="">Selecionar um Tipo de Servico</option>
+                            <?php foreach ($tipos_servicos as $tipo): ?>
+                                <option value="<?php echo $tipo['id_tipo']; ?>">
+                                    <?php echo $tipo['tipo_servico']; ?>
+                                </option>
+                            <?php endforeach; ?>
                         </select>
                     </div>
                     <button style="background-color: #00631b; border-color: black;" type="submit" class="btn btn-primary">Atualizar</button>
@@ -247,20 +282,44 @@ while ($row = $serviceResult->fetch_assoc()) {
         });
 
         document.getElementById("selectService").addEventListener("change", function() {
-            var selectedService = this.value;
-            document.getElementById("proceedManageBtn").disabled = (selectedService === "");
+            var selectedServiceId = this.value;
 
-            var updateServiceForm = document.getElementById("updateServiceForm");
-            updateServiceForm.style.display = "none";
+            if (selectedServiceId !== "") {
+                var xhttp = new XMLHttpRequest();
 
-            if (selectedService !== "") {
-                var serviceInfo = selectedService.split(" - ");
-                document.getElementById("serviceDateUpdate").value = serviceInfo[2];
-                document.getElementById("serviceLocationUpdate").value = serviceInfo[1];
-                document.getElementById("serviceTimeUpdate").value = ""; // Limpa o valor anterior
-                document.getElementById("serviceTypeUpdate").value = ""; // Limpa o valor anterior
+                xhttp.onreadystatechange = function() {
+                    if (this.readyState === 4 && this.status === 200) {
+                        var serviceDetails = JSON.parse(this.responseText);
+
+                        if (serviceDetails) {
+                            document.getElementById("serviceDateUpdate").value = serviceDetails.data_servico;
+                            document.getElementById("serviceLocationUpdate").value = serviceDetails.local_servico;
+                            document.getElementById("serviceTimeUpdate").value = serviceDetails.hora_servico;
+                            document.getElementById("serviceTimeUpdateEnd").value = serviceDetails.hora_fim;
+                            document.getElementById("serviceTypeUpdate").value = serviceDetails.tipo_servico;
+                            
+                            // Exibir o formulário de atualização após carregar os detalhes
+                            document.getElementById("updateServiceForm").style.display = "block";
+                        }
+                    }
+                };
+
+                xhttp.open("GET", "get_service_details.php?id=" + selectedServiceId, true);
+                xhttp.send();
+            } else {
+                // Limpar os campos se nenhum serviço for selecionado
+                document.getElementById("serviceDateUpdate").value = "";
+                document.getElementById("serviceLocationUpdate").value = "";
+                document.getElementById("serviceTimeUpdate").value = "";
+                document.getElementById("serviceTimeUpdateEnd").value = "";
+                document.getElementById("serviceTypeUpdate").value = "";
+
+                // Esconder o formulário de atualização se nenhum serviço for selecionado
+                document.getElementById("updateServiceForm").style.display = "none";
             }
         });
+
+
 
         document.getElementById("proceedManageBtn").addEventListener("click", function() {
             var selectedService = document.getElementById("selectService").value;
@@ -279,6 +338,7 @@ while ($row = $serviceResult->fetch_assoc()) {
             
             var serviceDate = document.getElementById("serviceDate").value;
             var serviceTime = document.getElementById("serviceTime").value;
+            var serviceTimeEnd = document.getElementById("serviceTimeEnd").value; // Adicionar a hora final
             var serviceLocation = document.getElementById("serviceLocation").value;
             var serviceType = document.getElementById("serviceType").value;
             
@@ -292,7 +352,7 @@ while ($row = $serviceResult->fetch_assoc()) {
             };
             xhttp.open("POST", "<?php echo $_SERVER['PHP_SELF']; ?>", true);
             xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-            xhttp.send("action=add&date=" + serviceDate + "&time=" + serviceTime + "&location=" + serviceLocation + "&type=" + serviceType);
+            xhttp.send("action=add&date=" + serviceDate + "&time=" + serviceTime + "&time_end=" + serviceTimeEnd + "&location=" + serviceLocation + "&type=" + serviceType);
         });
 
 
@@ -305,6 +365,7 @@ while ($row = $serviceResult->fetch_assoc()) {
                 var serviceDate = document.getElementById("serviceDateUpdate").value;
                 var serviceLocation = document.getElementById("serviceLocationUpdate").value;
                 var serviceTime = document.getElementById("serviceTimeUpdate").value;
+                var serviceTimeEnd = document.getElementById("serviceTimeUpdateEnd").value; // Adicionar a nova hora final
                 var serviceType = document.getElementById("serviceTypeUpdate").value;
 
                 var xhttp = new XMLHttpRequest();
@@ -317,9 +378,10 @@ while ($row = $serviceResult->fetch_assoc()) {
                 };
                 xhttp.open("POST", "<?php echo $_SERVER['PHP_SELF']; ?>", true);
                 xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-                xhttp.send("action=update&id=" + serviceID + "&date=" + serviceDate + "&location=" + serviceLocation + "&time=" + serviceTime + "&type=" + serviceType);
+                xhttp.send("action=update&id=" + serviceID + "&date=" + serviceDate + "&location=" + serviceLocation + "&time=" + serviceTime + "&time_end=" + serviceTimeEnd + "&type=" + serviceType);
             }
         });
+
 
         document.getElementById("deleteBtn").addEventListener("click", function() {
             var selectedService = document.getElementById("selectServiceDelete").value;

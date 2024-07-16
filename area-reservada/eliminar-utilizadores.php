@@ -2,20 +2,18 @@
 <html lang="en">
 
 <?php
+session_start();
+include "./generals/config.php";
+$mysqli = new mysqli($bd_host, $bd_user, $bd_password, $bd_database);
 
-    session_start();
-    include "./generals/config.php";
-    $mysqli = new mysqli($bd_host, $bd_user, $bd_password, $bd_database);
+if ($mysqli->connect_error) {
+    die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
+}
 
-    if ($mysqli->connect_error) {
-        die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
-    }
-
-    if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
-        header("Location: ../index.php");
-        exit;
-    }
-
+if (empty($_SESSION["session_id"]) || $_SESSION["type"] < 3) {
+    header("Location: ../index.php");
+    exit;
+}
 ?>
 
 <head>
@@ -36,7 +34,15 @@
         <img style="width: 100%; height: auto;" src="./media/topAR.png" class="img-responsive">
     </div>
 
-    <?php include "header-direcao.php"; ?>
+    <?php 
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
+            include "header-direcao.php"; 
+        } 
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        } 
+
+    ?>
 
     <div class="container">
         <?php
@@ -45,7 +51,7 @@
         {
             global $mysqli;
 
-            $query = "DELETE FROM users1 WHERE user = ?";
+            $query = "UPDATE users1 set estado=0 WHERE user = ?";
             $stmt = $mysqli->prepare($query);
             $stmt->bind_param("s", $usuario);
             $resultado = $stmt->execute();
@@ -68,17 +74,23 @@
         $search_nome = isset($_POST['search']) ? $_POST['search'] : null;
         $resultados = array();
 
-        if ($tipo_selecionado && $search_nome) {
-            $query = "SELECT user, nome FROM users1 WHERE type = $tipo_selecionado AND nome LIKE '%$search_nome%'";
-            $resultado = $mysqli->query($query);
+        // Consulta SQL ajustada para incluir todos os usuários do tipo selecionado, independentemente do nome
+        $query = "SELECT user, nome, estado FROM users1";
+        if (!empty($tipo_selecionado)) {
+            $query .= " WHERE type = $tipo_selecionado AND estado=1";
+        }
+        if (!empty($search_nome)) {
+            $query .= " AND nome LIKE '%$search_nome%'";
+        }
+        
+        $resultado = $mysqli->query($query);
 
-            if ($resultado) {
-                while ($row = $resultado->fetch_assoc()) {
-                    $resultados[] = $row;
-                }
-            } else {
-                echo "Erro na consulta: " . $mysqli->error;
+        if ($resultado) {
+            while ($row = $resultado->fetch_assoc()) {
+                $resultados[] = $row;
             }
+        } else {
+            echo "Erro na consulta: " . $mysqli->error;
         }
 
         ?>
@@ -107,7 +119,7 @@
             </div>
             <div class="col-md-6">
                 <?php
-                if ($tipo_selecionado && $search_nome) {
+                if ($tipo_selecionado) {
                     if (count($resultados) > 0) {
                         ?>
                         <form method="POST">
@@ -138,23 +150,70 @@
 </body>
 
 <?php
-
+// Modal de Sucesso
+$successModal = '';
 if (isset($_POST['submit_excluir'])) {
     $usuario_selecionado = $_POST['user_dropdown'];
     $exclusao_sucesso = excluirUsuario($usuario_selecionado);
     if ($exclusao_sucesso) {
-        echo '<div style="width: 70%; margin: auto;" class="alert alert-success">Utilizador eliminado com sucesso!</div>';
+        $successModal = '<div class="modal" tabindex="-1" role="dialog" id="successModal">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Sucesso!</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Utilizador eliminado com sucesso!</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>';
     } else {
-        echo '<div style="width: 70%; margin: auto;" class="alert alert-danger">Erro ao eliminar o utilizador.</div>';
+        $successModal = '<div class="modal" tabindex="-1" role="dialog" id="errorModal">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Erro!</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p>Erro ao eliminar o utilizador.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>';
     }
 }
-
+echo $successModal;
 ?>
 
+<!-- ... (código anterior) ... -->
+
+<script>
+    // Exibir modal de sucesso ao carregar a página
+    $(document).ready(function() {
+        $('#successModal').modal('show');
+    });
+
+    // Exibir modal de erro ao carregar a página
+    $(document).ready(function() {
+        $('#errorModal').modal('show');
+    });
+
+    // Adicione este script para redirecionar para test.php ao pressionar o botão no modal de sucesso
+    $('#successModal').on('hidden.bs.modal', function(e) {
+        window.location.href = 'index.php';
+    });
+
+    // Adicione este script para redirecionar para test.php ao pressionar o botão no modal de erro
+    $('#errorModal').on('hidden.bs.modal', function(e) {
+        window.location.href = 'index.php';
+    });
+</script>
+
 <?php
-
-    include "footer-reservado.php";
-
+include "footer-reservado.php";
 ?>
 
 </html>

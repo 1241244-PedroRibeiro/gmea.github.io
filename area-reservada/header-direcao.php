@@ -12,24 +12,32 @@
                     <a href="index.php" class="nav-item nav-link">INÍCIO</a>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle no-arrow" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                          CONTEÚDO
+                          INFORMAÇÕES
                         </a>
                         <ul class="dropdown-menu">
-                          <li><a class="dropdown-item" href="gerir-servicos.php">Gerir Serviços</a></li>
-                          <li><a class="dropdown-item" href="gerir-noticias.php">Gerir Notícias</a></li>
-                          <li><a class="dropdown-item" href="#">Adicionar fotos</a></li>
+                          <li><a class="dropdown-item" href="as-minhas-informacoes.php">Consultar os meus dados</a></li>
+                          <li><a class="dropdown-item" href="alterar-password.php">Alterar a password</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle no-arrow" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                          INSERIR
+                          CONTEÚDO
                         </a>
                         <ul class="dropdown-menu">
-                          <li><a class="dropdown-item" href="criar-utilizador.php">Inserir utilizadores</a></li>
-                          <li><a class="dropdown-item" href="#">Inserir avisos</a></li>
-                          <li><a class="dropdown-item" href="adicionar-inventario.php">Inserir inventário</a></li>
-                          <li><a class="dropdown-item" href="#">Inserir membros banda sinfónica</a></li>
-                          <li><a class="dropdown-item" href="adicionar-socio.php">Inserir sócios</a></li>
+                          <li><a class="dropdown-item" href="gerir-servicos.php">Gerir Serviços</a></li>
+                          <li><a class="dropdown-item" href="gerir-conteudo.php">Gerir Páginas</a></li>
+                          <li><a class="dropdown-item" href="gerir-avisos.php">Avisos</a></li>
+                          <li><a class="dropdown-item" href="lancar-pautas.php">Pautas de Avaliação</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle no-arrow" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                          NOTÍCIAS
+                        </a>
+                        <ul class="dropdown-menu">
+                          <li><a class="dropdown-item" href="adicionar-noticias.php">Adicionar Notícia</a></li>
+                          <li><a class="dropdown-item" href="editar-noticias.php">Editar Notícia</a></li>
+                          <li><a class="dropdown-item" href="eliminar-noticias.php">Eliminar Notícia</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -37,23 +45,17 @@
                           GERIR
                         </a>
                         <ul class="dropdown-menu">
+                          <li><a class="dropdown-item" href="gerir-utilizadores.php">Utilizadores</a></li>
                           <li><a class="dropdown-item" href="gerir-professores.php">Professores</a></li>
+                          <li><a class="dropdown-item" href="gerir-inventario.php">Inventário</a></li>
                           <li><a class="dropdown-item" href="gerir-alunos.php">Alunos</a></li>
+                          <li><a class="dropdown-item" href="gerir-informacoes-alunos.php">Informações dos Alunos</a></li>
+                          <li><a class="dropdown-item" href="gerir-aulas.php">Aulas</a></li>
+                          <li><a class="dropdown-item" href="gerir-alunos-aulas.php">Alunos das Turmas</a></li>
                           <li><a class="dropdown-item" href="gerir-turmas.php">Turmas</a></li>
-                          <li><a class="dropdown-item" href="#">Membros banda sinfónica</a></li>
-                          <li><a class="dropdown-item" href="#">Sócios</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle no-arrow" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                          REMOVER
-                        </a>
-                        <ul class="dropdown-menu">
-                          <li><a class="dropdown-item" href="criar-utilizador.php">Remover utilizadores</a></li>
-                          <li><a class="dropdown-item" href="#">Remover avisos</a></li>
-                          <li><a class="dropdown-item" href="eliminar-inventario.php">Remover inventário</a></li>
-                          <li><a class="dropdown-item" href="#">Remover membros banda sinfónica</a></li>
-                          <li><a class="dropdown-item" href="eliminar-socios.php">Remover Sócios</a></li>
+                          <li><a class="dropdown-item" href="gerir-socios.php">Sócios</a></li>
+                          <li><a class="dropdown-item" href="gerir-agenda.php">Agenda</a></li>
+                          <li><a class="dropdown-item" href="gerir-justificacoes.php">Justificações de Faltas</a></li>
                         </ul>
                     </li>
                     <li class="nav-item dropdown">
@@ -61,8 +63,6 @@
                           EMITIR
                         </a>
                         <ul class="dropdown-menu">
-                          <li><a class="dropdown-item" href="#">Pagamentos aos professores</a></li>
-                          <li><a class="dropdown-item" href="#">Pagamentos aos membros da banda sinfónica</a></li>
                           <li><a class="dropdown-item" href="quotas-socios.php">Quotas Sócios</a></li>
                           <li><a class="dropdown-item" href="mensalidades-alunos.php">Mensalidades dos alunos</a></li>
                           <li><a class="dropdown-item" href="emitir-faturas.php">Recibos</a></li>
@@ -73,17 +73,15 @@
                           CONSULTAR
                         </a>
                         <ul class="dropdown-menu">
-                          <li><a class="dropdown-item" href="#">Avaliações</a></li>
-                          <li><a class="dropdown-item" href="#">Alunos</a></li>
-                          <li><a class="dropdown-item" href="#">Professores</a></li>
-                          <li><a class="dropdown-item" href="#">Avisos</a></li>
-                          <li><a class="dropdown-item" href="consultar-inventario.php">Inventário (com filtro)</a></li>
-                          <li><a class="dropdown-item" href="consultar-inventario-todo.php">Inventário (todo)</a></li>
-                          <li><a class="dropdown-item" href="#">Membros Banda Sinfónica</a></li>
-                          <li><a class="dropdown-item" href="#">Quotas Sócios</a></li>
+                          <li><a class="dropdown-item" href="consultar-todas-avaliacoes.php">Avaliações</a></li>
+                          <li><a class="dropdown-item" href="consultar-avisos.php">Avisos</a></li>
                         </ul>
                     </li>
                     <a href="generals/logout.php" class="nav-item nav-link">TERMINAR SESSÃO</a>
+                      <!-- Botão de engrenagem -->
+                      <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#configModal">
+                        <i class="fas fa-cog"></i>
+                    </button>
                 </div>
             </div>
         </div>
@@ -114,3 +112,31 @@ button {
 }
 
 </style>
+
+<!-- Modal -->
+<div class="modal fade" id="configModal" tabindex="-1" aria-labelledby="configModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="configModalLabel">Configurações</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Conteúdo do modal aqui -->
+                <div class="mb-3">
+                    <label for="anoLetivoSelect" class="form-label">Ano Letivo:</label>
+                    <select class="form-select" id="anoLetivoSelect">
+                        <option value="">Selecione</option>
+                        <option value="2023/24">2023/24</option>
+                        <!-- Adicione outras opções de ano letivo conforme necessário -->
+                    </select>
+                </div>
+                <p>Versão da aplicação: 0.8.01</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Guardar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>

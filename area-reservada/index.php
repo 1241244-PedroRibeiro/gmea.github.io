@@ -13,25 +13,29 @@ if (empty($_SESSION["session_id"]) && empty($_POST["login"]) && empty($_POST["us
     exit;
 }
 
-// Defina o número de meses para considerar como um ano (12 meses)
-$mesesPorAno = 12;
-
-// Calcula a data de corte (hoje - 1 ano em meses)
-$dataCorte = date('Y-m-d', strtotime('-' . $mesesPorAno . ' months'));
-
-// Query para atualizar a tabela "socios"
-$query = "UPDATE socios 
-          SET quota = 0
-          WHERE DATEDIFF(NOW(), data_pagamento) > " . $mesesPorAno;
-
-$result = $mysqli->query($query);
-
 $user = $_SESSION["username"];
+$type = $_SESSION["type"];
 
 // Consulta SQL para obter as informações do usuário logado
-$query = "SELECT nome, user, cc, data_nas, email, foto FROM users1 WHERE user = '$user'";
+$query = "SELECT nome, user, cc, data_nas, email, foto FROM users1 WHERE user = '$user' and estado=1";
 $result = $mysqli->query($query);
 $row = $result->fetch_assoc();
+
+// Converte a data de nascimento para o formato dd-mm-yyyy
+$data_nas_formatada = DateTime::createFromFormat('Y-m-d', $row['data_nas'])->format('d/m/Y');
+
+if ($type == 1) {
+    // Consulta SQL para obter as informações do usuário logado
+    $queryAlunos = "SELECT turma FROM alunos WHERE user = '$user'";
+    $resultAlunos = $mysqli->query($queryAlunos);
+    $rowAluno = $resultAlunos->fetch_assoc();
+    $turma = $rowAluno['turma'];
+
+    $queryTurma = "SELECT nome_turma FROM turmas_gerais WHERE cod_turma = '$turma'";
+    $resultTurma = $mysqli->query($queryTurma);
+    $rowTurma = $resultTurma->fetch_assoc();
+}
+
 
 ?>
 
@@ -63,6 +67,16 @@ $row = $result->fetch_assoc();
           text-align: right;
         }
 
+        .profile-photo-cell {
+            vertical-align: middle;
+            text-align: center;
+        }
+
+        .profile-photo {
+            max-width: 100%;
+            height: auto;
+        }
+
     </style>
 
 </head>
@@ -76,49 +90,305 @@ $row = $result->fetch_assoc();
     <?php
     if ($_SESSION["type"] == 1) {
         include "header-alunos.php";
+    ?>
+        <div class="container mt-4">
+            <!-- Início da tabela adaptada -->
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                <tr>
+                    <th colspan="2">Dados Atuais</th>
+                    <th class="text-center">Foto</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>N.º do CC:</strong></td>
+                    <td><?php echo $row['cc']; ?></td>
+                    <td rowspan="5" class="profile-photo-cell">
+                        <img src="<?php echo $row['foto']; ?>" class="profile-photo" alt="Foto">
+                    </td>
+                </tr>
+                <!-- Adicione mais linhas conforme necessário -->
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Número:</strong></td>
+                    <td><?php echo substr($row['user'], 1); ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Nome:</strong></td>
+                    <td><?php echo $row['nome']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Data Nascimento:</strong></td>
+                    <td><?php echo $data_nas_formatada; ?></td>
+                </tr>
+                <!--<tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Ano:</strong></td>
+                    <td><?php echo $row['ano']; ?></td>
+                </tr> -->
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Turma:</strong></td>
+                    <td><?php echo "Turma " . $rowTurma['nome_turma']; ?></td>
+                </tr>
+                </tbody>
+            </table>
+            <!-- Fim da tabela adaptada -->
+        </div>
+    <?php
+
     }
     if ($_SESSION["type"] == 2) {
+        include "header-profs.php";
+    ?>
+
+        <div class="container mt-4">
+            <!-- Início da tabela adaptada -->
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                <tr>
+                    <th colspan="2">Dados Atuais</th>
+                    <th class="text-center">Foto</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>N.º do CC:</strong></td>
+                    <td><?php echo $row['cc']; ?></td>
+                    <td rowspan="5" class="profile-photo-cell">
+                        <img src="<?php echo $row['foto']; ?>" class="profile-photo" alt="Foto">
+                    </td>
+                </tr>
+                <!-- Adicione mais linhas conforme necessário -->
+
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Número:</strong></td>
+                    <td><?php echo substr($row['user'], 1); ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Nome:</strong></td>
+                    <td><?php echo $row['nome']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Data Nascimento:</strong></td>
+                    <td><?php echo $data_nas_formatada; ?></td>
+                </tr>
+                <!--<tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Ano:</strong></td>
+                    <td><?php echo $row['ano']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Turma:</strong></td>
+                    <td><?php echo $row['turma']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Curso:</strong></td>
+                    <td><?php echo $row['curso']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Sexo:</strong></td>
+                    <td><?php echo $row['sexo']; ?></td>
+                </tr>
+
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Enc. Educação:</strong></td>
+                    <td colspan="2"><?php echo $row['enc_educacao']; ?></td>
+                </tr>
+
+                <tr>
+                    <td colspan="3" bgcolor=""></td>
+                </tr>
+                <tr>
+                    <th colspan="3" class="thead-dark">Tutor do Aluno</th>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%" valign="top"><strong>Nome:</strong></td>
+                    <td colspan="2"><?php echo $row['tutor_nome']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%" valign="top"><strong>e-Mail do Tutor:</strong></td>
+                    <td colspan="2">
+                        <a href="mailto:<?php echo $row['tutor_email']; ?>" target="_blank" style="color:orange;">
+                            Clique aqui para contactar o Tutor.
+                        </a>
+                        (ou utilize o e-mail: <?php echo $row['tutor_email']; ?>)
+                    </td>
+                </tr> -->
+                </tbody>
+            </table>
+            <!-- Fim da tabela adaptada -->
+        </div>
+    <?php
+
     }
     if ($_SESSION["type"] == 3) {
         include "header-direcao.php";
+
+        ?>
+
+        <div class="container mt-4">
+            <!-- Início da tabela adaptada -->
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                <tr>
+                    <th colspan="2">Dados Atuais</th>
+                    <th class="text-center">Foto</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>N.º do CC:</strong></td>
+                    <td><?php echo $row['cc']; ?></td>
+                    <td rowspan="5" class="profile-photo-cell">
+                        <img src="<?php echo $row['foto']; ?>" class="profile-photo" alt="Foto">
+                    </td>
+                </tr>
+                <!-- Adicione mais linhas conforme necessário -->
+
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Número:</strong></td>
+                    <td><?php echo substr($row['user'], 1); ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Nome:</strong></td>
+                    <td><?php echo $row['nome']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Data Nascimento:</strong></td>
+                    <td><?php echo $data_nas_formatada; ?></td>
+                </tr>
+                <!--<tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Ano:</strong></td>
+                    <td><?php echo $row['ano']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Turma:</strong></td>
+                    <td><?php echo $row['turma']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Curso:</strong></td>
+                    <td><?php echo $row['curso']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Sexo:</strong></td>
+                    <td><?php echo $row['sexo']; ?></td>
+                </tr>
+
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Enc. Educação:</strong></td>
+                    <td colspan="2"><?php echo $row['enc_educacao']; ?></td>
+                </tr>
+
+                <tr>
+                    <td colspan="3" bgcolor=""></td>
+                </tr>
+                <tr>
+                    <th colspan="3" class="thead-dark">Tutor do Aluno</th>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%" valign="top"><strong>Nome:</strong></td>
+                    <td colspan="2"><?php echo $row['tutor_nome']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%" valign="top"><strong>e-Mail do Tutor:</strong></td>
+                    <td colspan="2">
+                        <a href="mailto:<?php echo $row['tutor_email']; ?>" target="_blank" style="color:orange;">
+                            Clique aqui para contactar o Tutor.
+                        </a>
+                        (ou utilize o e-mail: <?php echo $row['tutor_email']; ?>)
+                    </td>
+                </tr> -->
+                </tbody>
+            </table>
+            <!-- Fim da tabela adaptada -->
+        </div>
+    <?php
+
+    }
+
+        if ($_SESSION["type"] == 4) {
+        include "header-professor-direcao.php";
+
+        ?>
+
+        <div class="container mt-4">
+            <!-- Início da tabela adaptada -->
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                <tr>
+                    <th colspan="2">Dados Atuais</th>
+                    <th class="text-center">Foto</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>N.º do CC:</strong></td>
+                    <td><?php echo $row['cc']; ?></td>
+                    <td rowspan="5" class="profile-photo-cell">
+                        <img src="<?php echo $row['foto']; ?>" class="profile-photo" alt="Foto">
+                    </td>
+                </tr>
+                <!-- Adicione mais linhas conforme necessário -->
+
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Número:</strong></td>
+                    <td><?php echo substr($row['user'], 1); ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Nome:</strong></td>
+                    <td><?php echo $row['nome']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Data Nascimento:</strong></td>
+                    <td><?php echo $data_nas_formatada; ?></td>
+                </tr>
+                <!--<tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Ano:</strong></td>
+                    <td><?php echo $row['ano']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Turma:</strong></td>
+                    <td><?php echo $row['turma']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Curso:</strong></td>
+                    <td><?php echo $row['curso']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Sexo:</strong></td>
+                    <td><?php echo $row['sexo']; ?></td>
+                </tr>
+
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%"><strong>Enc. Educação:</strong></td>
+                    <td colspan="2"><?php echo $row['enc_educacao']; ?></td>
+                </tr>
+
+                <tr>
+                    <td colspan="3" bgcolor=""></td>
+                </tr>
+                <tr>
+                    <th colspan="3" class="thead-dark">Tutor do Aluno</th>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%" valign="top"><strong>Nome:</strong></td>
+                    <td colspan="2"><?php echo $row['tutor_nome']; ?></td>
+                </tr>
+                <tr>
+                    <td bgcolor="#D6D6D6" width="22%" valign="top"><strong>e-Mail do Tutor:</strong></td>
+                    <td colspan="2">
+                        <a href="mailto:<?php echo $row['tutor_email']; ?>" target="_blank" style="color:orange;">
+                            Clique aqui para contactar o Tutor.
+                        </a>
+                        (ou utilize o e-mail: <?php echo $row['tutor_email']; ?>)
+                    </td>
+                </tr> -->
+                </tbody>
+            </table>
+            <!-- Fim da tabela adaptada -->
+        </div>
+    <?php
+
     }
     ?>
-
-  <div class="container">
-      <div class="row">
-          <div class="col-6">
-              <table class="table">
-                  <tbody>
-                      <tr>
-                          <th>Nome:</th>
-                          <td><?php echo $row['nome']; ?></td>
-                      </tr>
-                      <tr>
-                          <th>Número:</th>
-                          <td><?php echo substr($row['user'], 1); ?></td>
-                      </tr>
-                      <tr>
-                          <th>Número do CC:</th>
-                          <td><?php echo $row['cc']; ?></td>
-                      </tr>
-                      <tr>
-                          <th>Data de Nascimento:</th>
-                          <td><?php echo $row['data_nas']; ?></td>
-                      </tr>
-                      <tr>
-                          <th>Email:</th>
-                          <td><?php echo $row['email']; ?></td>
-                      </tr>
-                  </tbody>
-              </table>
-          </div>
-          <div class="col-6" style="position: relative;">
-              <div style="position: absolute; top: 0; bottom: 0; left: 0; right: 0; display: flex; justify-content: center; align-items: center;">
-                  <img src="<?php echo $row['foto']; ?>" alt="Foto" style="max-height: 100%; max-width: 100%; object-fit: contain;">
-              </div>
-          </div>
-      </div>
-  </div>
 
 
     <?php

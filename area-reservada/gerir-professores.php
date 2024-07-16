@@ -14,7 +14,7 @@ if (empty($_SESSION["session_id"]) || $_SESSION["type"] != 3) {
 
 $utilizadores = array();
 
-$query = "SELECT user, nome FROM users1 WHERE type=2";
+$query = "SELECT user, nome FROM users1 WHERE type=2 and estado=1";
 $resultado = mysqli_query($mysqli, $query);
 
 if ($resultado) {
@@ -39,6 +39,32 @@ if ($resultado) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
     <link href="https://netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+
+    <style>
+        .btn-remove {
+            margin-right: 5px;
+        }
+    </style>
+
+    <script>
+        function removerDisciplina(user, cod_dis) {
+            if (confirm('Tem certeza que deseja remover esta disciplina?')) {
+                // Envia uma requisição AJAX para remover a disciplina
+                $.ajax({
+                    type: 'POST',
+                    url: 'remover_disciplina.php',
+                    data: { user: user, cod_dis: cod_dis },
+                    success: function(response) {
+                        // Atualize a tabela após a remoção bem-sucedida
+                        location.reload();
+                    },
+                    error: function(error) {
+                        console.error('Erro ao remover disciplina: ' + error.responseText);
+                    }
+                });
+            }
+        }
+    </script>
 </head>
 
 <body>
@@ -47,8 +73,12 @@ if ($resultado) {
     </div>
 
     <?php 
-
-    include 'header-direcao.php';
+        if ($_SESSION["type"] == 3) { // Mostrar cabeçalho para professores
+            include "header-direcao.php"; 
+        } 
+        if ($_SESSION["type"] == 4) { // Mostrar cabeçalho para professores
+            include "header-professor-direcao.php";
+        } 
 
     ?>
 
@@ -72,7 +102,7 @@ if ($resultado) {
                 $selected_user = $_POST['user'];
                 $nome = '';
 
-                $query = "SELECT nome FROM users1 WHERE user = '$selected_user'";
+                $query = "SELECT nome FROM users1 WHERE user = '$selected_user' and estado=1";
                 $result = $mysqli->query($query);
 
                 if ($result && $result->num_rows > 0) {
@@ -92,7 +122,8 @@ if ($resultado) {
                     <select id="disciplina" name="disciplina" class="form-select" required>
                         <option value="">Selecione uma disciplina</option>
                         <?php
-                            $query = "SELECT cod_dis, nome_dis FROM cod_dis";
+                            $query = "SELECT cod_dis, nome_dis FROM cod_dis 
+                                    WHERE cod_dis NOT IN (SELECT cod_dis FROM profs WHERE user = '$selected_user')";
                             $result = $mysqli->query($query);
 
                             if ($result && $result->num_rows > 0) {
@@ -127,12 +158,13 @@ if ($resultado) {
                 $query = "SELECT cod_dis.cod_dis, cod_dis.nome_dis FROM cod_dis LEFT JOIN profs ON profs.cod_dis = cod_dis.cod_dis WHERE profs.user = '$selected_user'";
                 $result = $mysqli->query($query);
 
-                echo '<h3>Disciplinas atribuídas a ' . $selected_user . '-' . $nome . '</h3>';
+                echo '<h3>Disciplinas atribuídas a ' . $selected_user . ' - ' . $nome . '</h3>';
                 echo '<table class="table table-striped">';
                 echo '<thead>';
                 echo '<tr>';
                 echo '<th>Código da Disciplina</th>';
                 echo '<th>Nome da Disciplina</th>';
+                echo '<th>Ação</th>'; // Adiciona a nova coluna "Ação"
                 echo '</tr>';
                 echo '</thead>';
                 echo '<tbody>';
@@ -142,11 +174,12 @@ if ($resultado) {
                         echo '<tr>';
                         echo '<td>' . $row['cod_dis'] . '</td>';
                         echo '<td>' . $row['nome_dis'] . '</td>';
+                        echo '<td><button class="btn btn-danger btn-sm btn-remove" onclick="removerDisciplina(\'' . $selected_user . '\', \'' . $row['cod_dis'] . '\')">Remover</button></td>'; // Adiciona o botão "Remover"
                         echo '</tr>';
                     }
                 } else {
                     echo '<tr>';
-                    echo '<td colspan="2">Nenhuma disciplina atribuída.</td>';
+                    echo '<td colspan="3">Nenhuma disciplina atribuída.</td>';
                     echo '</tr>';
                 }
 
@@ -155,12 +188,9 @@ if ($resultado) {
             ?>
         <?php endif; ?>
     </div>
+
+    <?php include 'footer-reservado.php'; ?>
+
 </body>
-
-<?php 
-
-include 'footer-reservado.php';
-
-?>
 
 </html>
