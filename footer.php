@@ -1,11 +1,9 @@
+<br><br>  
+<!-- Footer 2 - Bootstrap Brain Component -->
+<footer class="footer" style="background-color: #00631b; color: white;">
+  <br><br>  
 
-
-<!-- Remove the container if you want to extend the Footer to full width. -->
-<div class="my-5">
-
-  <footer style="background-color: #00631b; color: white;">
-    <!-- Grid container -->
-    <div class="container p-4">
+  <div class="container p-4">
       <!--Grid row-->
       <div class="row mt-4">
         <!--Grid column-->
@@ -46,11 +44,11 @@
             <tbody class="fw-normal">
               <tr>
                 <td>Segunda a Sexta</td>
-                <td>Conforme</td>
+                <td>17:00 - 20:00</td>
               </tr>
               <tr>
                 <td>Sábado</td>
-                <td>09:00 - 13:00 | 14:00 - 19:00</td>
+                <td>09:00 - 19:00</td>
               </tr>
               <tr>
                 <td>Domingo</td>
@@ -67,11 +65,8 @@
 
     <!-- Copyright -->
     <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">
-      © 2023 Copyright:
+      © 2024 Copyright:
       <a class="text-white" href="https://gmea.pt/">gmea.pt</a>
     </div>
-    <!-- Copyright -->
-  </footer>
 
-</div>
-<!-- End of .container -->
+</footer>

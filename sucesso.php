@@ -9,40 +9,6 @@ if ($mysqli->connect_error) {
     die('Erro: (' . $mysqli->connect_errno . ') ' . $mysqli->connect_error);
 }
 
-$idNoticia = $_GET['id'];
-
-// Consulta para obter informações completas da notícia, incluindo todas as fotos
-$query = "SELECT nt.titulo_noticia, ni.data_noticia, txt.texto_noticia, GROUP_CONCAT(nf.fotos_noticia SEPARATOR ',') AS fotos_noticia
-          FROM noticias_info ni
-          JOIN noticias_titulo nt ON ni.id_noticia = nt.id_noticia
-          JOIN noticias_texto txt ON ni.id_noticia = txt.id_noticia
-          JOIN noticias_fotos nf ON ni.id_noticia = nf.id_noticia
-          WHERE ni.id_noticia = ?
-          LIMIT 1";
-
-$statement = $mysqli->prepare($query);
-
-if ($statement === false) {
-    die('Erro: (' . $mysqli->errno . ') ' . $mysqli->error);
-}
-
-$statement->bind_param('i', $idNoticia);
-
-if ($statement->execute() === false) {
-    die('Erro: (' . $statement->errno . ') ' . $statement->error);
-}
-
-$statement->bind_result($tituloNoticia, $dataNoticia, $textoNoticia, $fotosNoticia);
-
-if ($statement->fetch() === false) {
-    die('Erro ao obter informações da notícia.');
-}
-
-$statement->close();
-
-$fotos = explode(",", $fotosNoticia);
-
-
 // Obter o endereço IP do usuário
 $ip = gethostbyaddr($_SERVER['REMOTE_ADDR']);
 
@@ -79,34 +45,36 @@ if (!$ipExists) {
     $statement->close();
 }
 
+
+
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>GMEA</title>
-<link rel="shortcut icon" type="image/png" href="media/logo.png/"/>
-<script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" crossorigin="anonymous"></script>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GMEA</title>
+    <link rel="shortcut icon" type="image/png" href="media/logo.png/"/>
+    <script src="https://use.fontawesome.com/releases/v6.3.0/js/all.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<style>
-  @keyframes fadeIn {
-    0% { opacity: 0; }
-    100% { opacity: 1; }
-  }
+    <style>
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
 
-  body {
-    animation: 2s ease-out 0s 1 fadeIn;
-  }
+        body {
+            animation: 2s ease-out 0s 1 fadeIn;
+        }
 
-  a:hover {
-    color: red;
-  }
-</style>
+        a:hover {
+            color: red;
+        }
+    </style>
 
 </head>
 <body>
@@ -117,82 +85,23 @@ if (!$ipExists) {
     <br><button onclick="acceptCookies()" style="background-color: #00631b; color: #fff; border: none; padding: 5px 10px; margin-left: 10px; cursor: pointer;">Fechar</button>
 </div>
 <?php } ?>
-    <?php
-        include "header.php";
-    ?>
+<?php
+include "header.php";
+?>
 
-<div class="container" >
-    <h2><?php echo $tituloNoticia; ?></h2>
-    <p>Data: <?php echo $dataNoticia; ?></p>
-    <?php
-    $query = "SELECT user FROM noticias_info WHERE id_noticia = $idNoticia";
-    $result = $mysqli->query($query);
-    if ($result->num_rows > 0) {
-        while ($row = $result->fetch_assoc()) {
-            $queryNome = "SELECT nome FROM users1 WHERE user = '" . $row['user'] . "'";
-            $resultNome = $mysqli->query($queryNome);
-            if ($resultNome->num_rows > 0) {
-                while ($rowNome = $resultNome->fetch_assoc()) {
-                    print('<p> Adicionada por: ' . $rowNome['nome'] . '</td>');
-                }
-            }
-            // Libere a memória associada ao resultado da consulta
-            $resultNome->free();
-        }
-    }
-    ?>
-    <p><?php echo $textoNoticia; ?></p>
+    <div class="container success-message">
+        <h1>Pedido Bem Sucedido!</h1>
+        <p>O seu pedido foi recebido com sucesso.</p>
+        <p class="small-text">Tentaremos ser o mais breves possíveis com o seu pedido.</p>
+        <p class="small-text">Atentamente,<br>A equipa de suporte do GMEA</p>
+        <br>        <br>        <br>        <br>        <br>        <br>        <br>        <br>        <br>        <br>
+    </div>
 
-    <?php if (!empty($fotos)) { ?>
-        <div id="carouselExampleIndicators" class="carousel slide mx-auto" data-bs-ride="carousel" style ="background-color: black;">
-            <div class="carousel-inner">
-                <?php
-                foreach ($fotos as $index => $foto) {
-                    ?>
-                    <div class="carousel-item <?php echo ($index === 0) ? 'active' : ''; ?>" style="text-align: center;">
-                        <?php
-                        // Get image dimensions
-                        list($width, $height) = getimagesize($foto);
-                        
-                        // Calculate aspect ratio
-                        $aspectRatio = $width / $height;
-                        
-                        // Calculate width and height for stretched image
-                        $stretchedWidth = 600 * $aspectRatio;
-                        $stretchedHeight = 600;
-                        ?>
-                        <div style="max-width: 100%; height: 600px; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 1px solid black;">
-                            <img src="<?php echo htmlspecialchars(trim($foto)); ?>" class="d-block" alt="Imagem da notícia" style="width: <?php echo $stretchedWidth; ?>px; height: <?php echo $stretchedHeight; ?>px; object-fit: <?php echo ($aspectRatio > 1) ? 'cover' : 'contain'; ?>;">
-                        </div>
-                    </div>
-                    <?php
-                }
-                ?>
-            </div>
-            <?php if (!empty($fotos) && count($fotos) > 1) { ?>
-                <button class="carousel-control-prev" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="prev">
-                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Previous</span>
-                </button>
-                <button class="carousel-control-next" type="button" data-bs-target="#carouselExampleIndicators" data-bs-slide="next">
-                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
-                    <span class="visually-hidden">Next</span>
-                </button>
-            <?php } ?>
-
-        </div>
-    <?php } ?>
-</div>
-
-
-
-
-    <?php
-        include "footer.php";
-    ?>
+<?php 
+include "footer.php";
+?>
 </body>
 </html>
-
 <?php
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     if (isset($_POST["login"]) && isset($_POST["user"]) && isset($_POST["password"])) {
@@ -265,15 +174,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 ?>
 
 <script>
-    const myModal = document.getElementById('myModal')
-    const myInput = document.getElementById('myInput')
-
-    myModal.addEventListener('shown.bs.modal', () => {
-        myInput.focus()
-    })
-
-
-    function acceptCookies() {
+        function acceptCookies() {
         // Armazene o consentimento do usuário em um cookie com uma data de expiração
         document.cookie = "cookieConsent=accepted; expires=Fri, 31 Dec 9999 23:59:59 GMT; path=/";
 
@@ -293,5 +194,4 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     document.addEventListener('DOMContentLoaded', function() {
         checkCookies();
     });
-
 </script>
