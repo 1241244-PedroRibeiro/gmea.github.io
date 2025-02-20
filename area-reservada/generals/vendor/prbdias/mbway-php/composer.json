@@ -1,0 +1,24 @@
+{
+    "name": "prbdias/mbway-php",
+    "type": "library",
+    "description": "PHP library to communicate with MB WAY API.",
+    "keywords": ["mbway"],
+    "homepage": "https://github.com/prbdias/mbway-php",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Paulo Dias",
+            "email": "prbdias@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~6.0"
+    },
+    "minimum-stability": "stable",
+    "autoload": {
+        "psr-0": { "prbdias\\mbway": "src/" }
+    }
+}
